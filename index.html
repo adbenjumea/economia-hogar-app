@@ -1580,29 +1580,39 @@ function cloudFail(e){
 async function cloudAdopt(rem){   // reemplaza los datos de este dispositivo por los de la nube
   const text=await cloudDecrypt(rem.env,await cloudPass());
   S=migrate(JSON.parse(text)); cloud.dirty=false; cloud.conflict=false; cloud.remote=null;
-  cloud.cfg.sha=rem.sha; cloud.cfg.salt=rem.env.salt; cloud.cfg.lastHash=await sha256b64(JSON.stringify(S)); cloud.cfg.lastSync=Date.now(); cloudSaveCfg();
+  cloud.cfg.sha=rem.sha; cloud.cfg.salt=rem.env.salt; cloud.cfg.lastHash=await sha256b64(JSON.stringify(S)); cloud.cfg.pending=null; cloud.cfg.lastSync=Date.now(); cloudSaveCfg();
   try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){}
   if(srv.on){ srv.dirty=true; clearTimeout(srv.t); srv.t=setTimeout(pushServer,300); }
   setCloud("ok"); render();
 }
-async function cloudPush(force){
+async function cloudPush(force,leaving){   // leaving: la app se cierra o pasa a segundo plano
   if(!cloud.on||cloud.busy||cloud.pulling||cloud.conflict||(!cloud.dirty&&!force)) return;
   cloud.busy=true; cloud.dirty=false; setCloud("sync");
-  let again=false;
+  let again=false, recheck=false;
   try{
     migrate(S);   // se normaliza antes de subir (así «lo local» y «lo de la nube» tienen siempre la misma forma)
     const text=JSON.stringify(S), hash=await sha256b64(text);   // se sube una «foto» de los datos; si cambian durante la subida, se vuelve a subir
     const env=await cloudEncrypt(text,await cloudPass(),cloud.cfg.salt||null);
     const body={message:"Sincronización "+new Date().toISOString(),content:b64e(_enc.encode(JSON.stringify(env)))};
     if(cloud.cfg.sha) body.sha=cloud.cfg.sha;
-    const r=await ghFetch(`/repos/${cloud.cfg.repo}/contents/${CLOUD_FILE}`,{method:"PUT",body:JSON.stringify(body)});
-    if(r.status===409||r.status===422){ cloud.dirty=true; cloud.conflict=true; setCloud("conflict"); return; }   // alguien subió antes
+    // se apunta qué versión se está subiendo: si la app se cierra antes de recibir la respuesta, al volver se reconoce como propia
+    cloud.cfg.pending=[...(cloud.cfg.pending||[]),hash].slice(-5); cloudSaveCfg();
+    const json=JSON.stringify(body);
+    const r=await ghFetch(`/repos/${cloud.cfg.repo}/contents/${CLOUD_FILE}`,{method:"PUT",body:json,keepalive:!!leaving&&json.length<60000});   // keepalive: termina aunque se cierre la página (máx. 64 KB)
+    if(r.status===409||r.status===422) throw cloudErr("stale");   // alguien subió antes (o fue esta misma subida): se comprueba abajo
     if(!r.ok) throw await ghError(r);
-    const j=await r.json(); cloud.cfg.sha=j.content.sha; cloud.cfg.salt=env.salt; cloud.cfg.lastHash=hash; cloud.cfg.lastSync=Date.now(); cloudSaveCfg();
+    const j=await r.json(); cloud.cfg.sha=j.content.sha; cloud.cfg.salt=env.salt; cloud.cfg.lastHash=hash; cloud.cfg.pending=null; cloud.cfg.lastSync=Date.now(); cloudSaveCfg();
     setCloud("ok"); again=cloud.dirty;
-  }catch(e){ cloud.dirty=true; cloudFail(e); }
+  }catch(e){ cloud.dirty=true; if(e.code==="stale") recheck=true; else cloudFail(e); }
   finally{ cloud.busy=false; }
-  if(again) cloudPush();
+  if(recheck) cloudPull(); else if(again) cloudPush();
+}
+async function cloudIsOurs(rem){   // ¿lo de la nube es una subida de este dispositivo cuya respuesta no llegó?
+  if(!(cloud.cfg.pending||[]).length) return false;
+  const h=await sha256b64(await cloudDecrypt(rem.env,await cloudPass()));
+  if(!cloud.cfg.pending.includes(h)) return false;
+  cloud.cfg.sha=rem.sha; cloud.cfg.salt=rem.env.salt; cloud.cfg.lastHash=h; cloud.cfg.pending=null; cloud.cfg.lastSync=Date.now(); cloudSaveCfg();
+  return true;
 }
 async function cloudPull(){
   if(!cloud.on||cloud.pulling||cloud.busy) return;
@@ -1612,6 +1622,7 @@ async function cloudPull(){
     const changed=cloud.dirty||(await sha256b64(JSON.stringify(S)))!==cloud.cfg.lastHash;   // ¿hay cambios locales sin subir?
     if(!rem.exists){ if(hasLocalData()){ cloud.dirty=true; cloud.cfg.sha=null; } else setCloud("ok"); }
     else if(rem.sha===cloud.cfg.sha){ if(changed) cloud.dirty=true; else setCloud("ok"); }
+    else if(changed&&await cloudIsOurs(rem)){ if((await sha256b64(JSON.stringify(S)))!==cloud.cfg.lastHash) cloud.dirty=true; else setCloud("ok"); }
     else if(changed){ cloud.conflict=true; cloud.remote=rem; cloud.dirty=true; setCloud("conflict"); }   // cambió en los dos sitios
     else await cloudAdopt(rem);
   }catch(e){ cloudFail(e); }
@@ -1760,7 +1771,9 @@ document.addEventListener("click",e=>{   // pulsar el aviso de la cabecera
   if(e.target.id!=="cloudstatus") return;
   if(cloud.conflict) cloudResolve(); else if(["pass","error","offline"].includes(cloud.state)) cloudPull();
 });
-document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") cloudPull(); });
+function cloudFlush(){ if(cloud.on&&cloud.dirty){ clearTimeout(cloud.t); cloudPush(false,true); } }   // sube ya lo pendiente
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") cloudPull(); else cloudFlush(); });
+addEventListener("pagehide",cloudFlush);
 addEventListener("online",()=>{ if(cloud.on) cloudPull(); });
 cloud.cfg=cloudLoadCfg();   // ¿este dispositivo ya está conectado a la nube?
 save();   // persiste la migración de ids, si la hubo
