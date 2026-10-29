@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- Seguridad: la página solo puede hablar con su propio origen y con la API de GitHub (nada de terceros) -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Economía">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -70,9 +70,13 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   .bar{padding:6px 16px;min-height:44px;gap:6px 10px;justify-content:flex-end;position:relative}
   .brand{display:none}
   .navtitle{display:block;position:absolute;left:50%;transform:translateX(-50%);font-weight:600;font-size:17px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
-  header{border-bottom-color:transparent;transition:border-color .2s}
-  header:not(.scrolled)::before{opacity:0}
+  /* cabecera opaca: con fondos translúcidos iOS 26 añade su propio desenfoque en los bordes de la pantalla */
+  header{background:var(--bg);border-bottom-color:transparent;transition:border-color .2s}
+  header::before{display:none}
   header.scrolled{border-bottom-color:var(--line2)}
+  /* bajo la barra de pestañas, el contenido se funde con el fondo en vez de verse a medias */
+  body::after{content:"";position:fixed;z-index:4;left:0;right:0;bottom:0;height:calc(env(safe-area-inset-bottom) + 84px);pointer-events:none;
+    background:linear-gradient(to bottom,color-mix(in srgb,var(--bg) 0%,transparent),var(--bg) 45%)}
   header.scrolled .navtitle{opacity:1}
   header.scrolled #status,header.scrolled #cloudstatus{opacity:0}
   #status,#cloudstatus{font-size:12px;transition:opacity .2s}
