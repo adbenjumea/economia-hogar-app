@@ -46,19 +46,26 @@ header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px 
 .brand{font-weight:700;font-size:17px;margin-right:auto}
 nav{display:flex;gap:4px;max-width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 nav::-webkit-scrollbar{display:none}
+nav .sh{display:none}
 nav button{border:0;background:none;color:var(--muted);padding:8px 14px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;flex:0 0 auto}
 @media(max-width:720px){   /* móvil: cabecera compacta y pestañas desplazables en una sola línea */
   .bar{gap:6px 12px;padding:8px 12px}
   .brand{margin-right:0}
   nav{order:5;flex:1 1 100%}
-  nav button{padding:8px 11px}
+  nav{gap:2px}
+  nav button{padding:8px 9px}
+  nav .lg{display:none} nav .sh{display:inline}   /* nombres cortos para que quepan las cinco pestañas */
   /* «Datos del mes» en móvil: sin columna «Dif.» y con campos más compactos para que se lean los importes enteros */
   .dt th:nth-child(4),.dt td:nth-child(4){display:none}
-  .dt td.n{width:auto;min-width:104px}
-  .dt input.num{font-size:14px;padding:6px 5px}
+  .dt td.n{width:auto;min-width:96px}
+  .dt input.num{padding:6px 5px}
+  td .dueinfo{white-space:normal}   /* «Próximo cobro: …» pasa a dos líneas en vez de ensanchar la tabla */
+  /* iPhone amplía la página al tocar un campo con letra de menos de 16 px */
+  input,select,textarea{font-size:16px!important}
   main{padding:12px}
   .card{padding:14px}
 }
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}   /* sin letra agrandada al girar el móvil */
 nav button.on{background:var(--soft);color:var(--accent)}
 main{max-width:1180px;margin:0 auto;padding:16px}
 h2{font-size:16px;margin:0 0 10px}
@@ -66,7 +73,7 @@ h3{font-size:13px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;let
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,40,30,.04),0 6px 20px rgba(20,40,30,.035)}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
 .side{position:sticky;top:72px}
-@media(max-width:860px){.grid{grid-template-columns:1fr}.side{position:static}}
+@media(max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static}}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
 button.btn,select,input[type=month]{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:8px;cursor:pointer}
 button.btn:hover{border-color:var(--accent)}
@@ -207,7 +214,8 @@ table.sum tr.muted td:first-child{color:var(--muted)}
 .tag.need{color:var(--sav);border-color:var(--sav)}
 .tag.want{color:var(--exp);border-color:var(--exp)}
 table.mx td,table.mx th{padding:6px 8px;text-align:right;border-top:1px solid var(--line)}
-table.mx td:first-child,table.mx th:first-child{text-align:left}
+table.mx td:first-child,table.mx th:first-child{text-align:left;white-space:nowrap}
+table.mx td:last-child{white-space:nowrap}
 .cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 label.f{display:block;font-size:12px;color:var(--muted)}
 #cloudstatus{margin-left:2px}
@@ -225,8 +233,8 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
   <span id="status" class="muted"></span>
   <span id="cloudstatus" class="muted" role="status"></span>
   <nav id="nav">
-    <button data-p="datos">Datos del mes</button>
-    <button data-p="movs">Movimientos</button>
+    <button data-p="datos"><span class="lg">Datos del mes</span><span class="sh">Mes</span></button>
+    <button data-p="movs"><span class="lg">Movimientos</span><span class="sh">Movim.</span></button>
     <button data-p="panel">Panel</button>
     <button data-p="anual">Anual</button>
     <button data-p="ajustes">Ajustes</button>
@@ -486,7 +494,7 @@ function render(){
   app.innerHTML = ({datos:pageDatos,movs:pageMov,panel:pagePanel,anual:pageAnual,ajustes:pageAjustes}[ui.page]||pageDatos)();
   if(ui.page==="datos") updateSummary();
 }
-document.getElementById("nav").onclick=e=>{ const p=e.target.dataset.p; if(p) go(p); };
+document.getElementById("nav").onclick=e=>{ const b=e.target.closest("[data-p]"); if(b) go(b.dataset.p); };
 
 /* ---------- Página: datos del mes ---------- */
 function monthBar(extra=""){
