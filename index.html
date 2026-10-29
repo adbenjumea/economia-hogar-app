@@ -289,6 +289,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 @media(max-width:720px){dialog{margin:auto auto calc(env(safe-area-inset-bottom) + 8px);width:calc(100vw - 16px);max-width:none;border-radius:28px}}   /* hoja inferior, como en iOS */
 dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;letter-spacing:0}
 .cloudform{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.linkbox{background:var(--soft);border-radius:12px;padding:14px;margin:12px 0}
 .cloudform .f{display:block;font-size:12px;font-weight:600;color:var(--muted)}
 .cloudform .f input{margin-top:5px;font-weight:400;color:var(--ink)}
 </style>
@@ -1302,7 +1303,8 @@ function catListHtml(){
   return parts.join("");
 }
 function pageAjustes(){
-  return `<div class="card"><h2>Categorías y presupuesto</h2>
+  // sin conectar a la nube, la sincronización va primero (es lo que se busca en un dispositivo nuevo)
+  return `${cloud.cfg?"":cloudCardHtml()}<div class="card"><h2>Categorías y presupuesto</h2>
     <p class="muted">Las <b>categorías</b> (Vivienda, Seguros, Préstamos…) agrupan <b>partidas</b> (Hipoteca, Luz, Netflix…). Cada tarjeta es una partida: aquí cambias su <b>nombre</b> y su <b>importe por defecto</b>; con <b>Opciones</b> accedes a su categoría, tipo, periodicidad, día de cobro, orden o a eliminarla. Para reordenar, arrastra el icono ⠿.</p>
     <div class="toolbar" style="margin:0 0 12px"><span class="seg" role="group" aria-label="Vista de las partidas"><button class="${ui.catView==="list"?"":"on"}" data-a="catview" data-v="groups">Por categorías</button><button class="${ui.catView==="list"?"on":""}" data-a="catview" data-v="list">Lista simple</button></span><button class="btn" data-a="addfam">+ Nueva categoría</button></div>
     <div class="catlist">${catListHtml()}</div>
@@ -1321,7 +1323,7 @@ function pageAjustes(){
       <p class="muted">Al importar o añadir movimientos, si la descripción contiene la palabra clave se asigna esa partida. Se aprenden solas cuando corriges una partida al importar; además hay reglas básicas (Mercadona, Repsol, Netflix…).</p>
       ${S.rules.map(r=>`<div class="rulecard"><span class="t">Si la descripción contiene</span><input class="txt" data-r="kw" data-id="${r.id}" value="${esc(r.kw)}" placeholder="palabra clave" aria-label="Palabra clave"><span class="t">→ partida</span><select class="sm" data-r="cat" data-id="${r.id}" aria-label="Partida">${catOptions(r.cat)}</select><button class="btn icon danger" data-a="delrule" data-id="${r.id}" aria-label="Eliminar regla">✕</button></div>`).join("")}
       <button class="btn" data-a="addrule">+ Nueva regla</button></div>
-    ${cloudCardHtml()}
+    ${cloud.cfg?cloudCardHtml():""}
     <div class="card"><h2>Datos y copias de seguridad</h2>
       <p class="muted">${srv.on?"Los datos se guardan en el archivo datos.json de la carpeta de la app, con una copia diaria en la carpeta «copias».":"Los datos se guardan solo en este navegador (abre la app con Abrir.command para guardarlos en un archivo)."} Descarga una copia de vez en cuando.</p>
       <div class="toolbar"><button class="btn primary" data-a="exportjson">Exportar copia (JSON)</button>
@@ -1515,6 +1517,7 @@ document.addEventListener("click",e=>{
   else if(a==="cloudconnect") cloudConnect();
   else if(a==="cloudsync") cloudSyncNow();
   else if(a==="cloudlink") cloudMakeLink();
+  else if(a==="cloudpaste") cloudPasteLink();
   else if(a==="gosum"){ const s=document.getElementById("summary"); if(s) s.scrollIntoView({behavior:"smooth",block:"start"}); }
   else if(a==="goto-ajustes"){ go("ajustes"); const c=document.getElementById("cloudcard"); if(c) c.scrollIntoView({block:"start"}); }
   else if(a==="clouddisconnect") cloudDisconnect();
@@ -1796,7 +1799,11 @@ async function cloudMakeLink(){
 function showLinkDialog(link){
   const d=document.createElement("dialog");
   d.innerHTML=`<h3>📱 Vincular otro dispositivo</h3>
-    <p class="muted" style="margin:0 0 10px">Abre este enlace en el móvil (por AirDrop o enviándotelo a ti mismo). Te pedirá la <b>misma contraseña de cifrado</b> y quedará conectado con tus datos. El enlace va cifrado: sin la contraseña no sirve de nada.</p>
+    <ol class="muted" style="margin:0 0 10px;padding-left:18px;line-height:1.55">
+      <li>Pulsa <b>Copiar enlace</b>. Con la misma cuenta de Apple, lo copiado aquí se puede pegar en el iPhone (portapapeles universal); si no, envíatelo por WhatsApp, Notas o correo y cópialo allí.</li>
+      <li>En el otro dispositivo abre la app (la de la pantalla de inicio) → <b>Ajustes → Pegar enlace de vinculación</b>.</li>
+      <li>Escribe la <b>misma contraseña de cifrado</b>. Listo.</li></ol>
+    <p class="hint" style="margin:0 0 10px">El enlace va cifrado: sin la contraseña no sirve de nada.</p>
     <input class="txt" readonly value="${esc(link)}" aria-label="Enlace de vinculación" style="font-size:12px">
     <div class="toolbar" style="margin:12px 0 0">${navigator.share?`<button class="btn primary" data-l="share">Compartir…</button>`:""}<button class="btn ${navigator.share?"":"primary"}" data-l="copy">Copiar enlace</button><button class="btn" data-l="close">Cerrar</button></div>
     <div class="hint" data-l="msg"></div>`;
@@ -1811,11 +1818,60 @@ function showLinkDialog(link){
   d.addEventListener("close",()=>d.remove());
   d.showModal(); d.querySelector("input").select();
 }
+function linkCodeOf(text){   // acepta el enlace completo o solo el código
+  const m=String(text||"").trim().match(/(?:#vincular=)?([A-Za-z0-9_-]{40,})\s*$/);
+  return m?m[1]:null;
+}
+function choose(title,html,buttons,onPick){   // ventana con varias opciones; devuelve la clave del botón pulsado (o null)
+  return new Promise(res=>{
+    const d=document.createElement("dialog");
+    d.innerHTML=`<h3>${title}</h3>${html}<div class="toolbar" style="margin:14px 0 0">${buttons.map(([k,t,p])=>`<button class="btn ${p?"primary":""}" data-k="${k}">${t}</button>`).join("")}</div>`;
+    document.body.appendChild(d); let v=null;
+    // onPick se llama dentro del propio toque: iOS solo deja copiar al portapapeles en ese momento
+    d.addEventListener("click",e=>{ const k=e.target.closest("[data-k]"); if(k){ v=k.dataset.k; if(onPick) onPick(v); d.close(); } });
+    d.addEventListener("close",()=>{ d.remove(); res(v); });
+    d.showModal();
+  });
+}
+async function cloudPasteLink(){   // «Pegar enlace de vinculación» (sobre todo para la app de la pantalla de inicio)
+  let text="";
+  try{ text=await navigator.clipboard.readText(); }catch(_){}
+  let code=linkCodeOf(text);
+  if(!code){   // sin permiso para leer el portapapeles o no había enlace: se pega a mano
+    const d=document.createElement("dialog");
+    d.innerHTML=`<h3>📋 Pegar enlace de vinculación</h3>
+      <p class="muted" style="margin:0 0 10px">Mantén pulsado el recuadro y elige <b>Pegar</b>. El enlace se crea en el dispositivo ya conectado: <i>Ajustes → Vincular otro dispositivo → Copiar enlace</i>.</p>
+      <textarea class="txt" rows="4" placeholder="https://…#vincular=…" autocapitalize="off" autocorrect="off" spellcheck="false" style="font-size:16px"></textarea>
+      <div class="toolbar" style="margin:12px 0 0"><button class="btn primary" data-k="ok">Vincular</button><button class="btn" data-k="no">Cancelar</button></div>`;
+    document.body.appendChild(d);
+    code=await new Promise(res=>{ let v=null;
+      d.addEventListener("click",e=>{ const k=e.target.closest("[data-k]"); if(!k) return;
+        if(k.dataset.k==="ok"){ v=linkCodeOf(d.querySelector("textarea").value); if(!v){ alert("Eso no parece un enlace de vinculación. Cópialo entero desde el otro dispositivo."); return; } }
+        d.close(); });
+      d.addEventListener("close",()=>{ d.remove(); res(v); });
+      d.showModal(); d.querySelector("textarea").focus(); });
+  }
+  if(code) await linkConnect(code);
+}
 async function cloudFromLink(){   // la app se abre con #vincular=…
   const m=location.hash.match(/^#vincular=([A-Za-z0-9_-]+)$/); if(!m) return false;
+  const full=location.href;
   history.replaceState(null,"",location.pathname+location.search);   // se quita el código de la barra de direcciones y del historial
+  // En el iPhone, la app de la pantalla de inicio guarda sus datos aparte de Safari: el enlace abierto en Safari no la vincula
+  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&navigator.standalone===false){
+    let copied=Promise.reject(); copied.catch(()=>{});
+    const k=await choose("📱 ¿Usas la app desde la pantalla de inicio?",
+      `<p class="muted" style="margin:0">Esa app guarda sus datos aparte de Safari, así que este enlace no la vincula si se abre aquí. Copia el enlace, abre la app y ve a <b>Ajustes → Pegar enlace de vinculación</b>.</p>`,
+      [["copy","Copiar enlace",true],["here","Vincular Safari"],["no","Cancelar"]],
+      k=>{ if(k==="copy") copied=navigator.clipboard.writeText(full); });
+    if(k==="copy"){ try{ await copied; alert("Copiado. Ahora abre la app desde la pantalla de inicio → Ajustes → Pegar enlace de vinculación."); }catch(_){ prompt("Copia este enlace:",full); } return false; }
+    if(k!=="here") return false;   // la app sigue arrancando con normalidad
+  }
+  return linkConnect(m[1]);
+}
+async function linkConnect(code){
   if(!(window.crypto&&crypto.subtle)){ alert("Este navegador no permite cifrar en esta dirección. Abre la app desde su dirección https."); return false; }
-  let o; try{ o=JSON.parse(b64urlDec(m[1])); if(o.v!==1||!o.s||!o.i||!o.c) throw 0; }catch(_){ alert("El enlace de vinculación no es válido o está incompleto."); return false; }
+  let o; try{ o=JSON.parse(b64urlDec(code)); if(o.v!==1||!o.s||!o.i||!o.c) throw 0; }catch(_){ alert("El enlace de vinculación no es válido o está incompleto."); return false; }
   for(let i=0;i<3;i++){
     const pass=await askPass(i?"Contraseña incorrecta: vuelve a escribirla":"Contraseña de cifrado (la misma que en tu otro dispositivo)");
     if(!pass) return false;
@@ -1825,16 +1881,16 @@ async function cloudFromLink(){   // la app se abre con #vincular=…
     await cloudConnectWith({repo:c.repo,token:c.token,pass,pass2:pass,remember});
     return true;
   }
-  alert("Contraseña incorrecta tres veces. Vuelve a abrir el enlace para intentarlo de nuevo."); return false;
+  alert("Contraseña incorrecta tres veces. Vuelve a intentarlo con el enlace."); return false;
 }
 function welcomeHtml(){   // solo si este dispositivo está vacío y sin conectar
   if(hasLocalData()||cloud.cfg) return "";
   return `<div class="card flash"><h2>👋 Esta app está vacía en este dispositivo</h2>
     <p class="muted" style="margin:0 0 10px">Tus datos no están en la web: viven en cada dispositivo y, si lo activas, en tu nube cifrada.</p>
     <ul class="muted" style="margin:0 0 12px;padding-left:18px;line-height:1.6">
-      <li><b>Si ya la usas en otro dispositivo</b> (por ejemplo, en tu Mac): allí ve a <i>Ajustes → Sincronización en la nube → Vincular otro dispositivo</i> y abre aquí el enlace.</li>
+      <li><b>Si ya la usas en otro dispositivo</b> (por ejemplo, en tu Mac): allí ve a <i>Ajustes → Vincular otro dispositivo → Copiar enlace</i> y aquí pulsa <b>Pegar enlace de vinculación</b>.</li>
       <li><b>Si empiezas de cero</b>: rellena ingresos y partidas, o mira los datos de ejemplo para probar.</li></ul>
-    <div class="toolbar"><button class="btn primary" data-a="goto-ajustes">Ir a la sincronización</button><button class="btn" data-a="demo">Ver datos de ejemplo</button></div></div>`;
+    <div class="toolbar"><button class="btn primary" data-a="cloudpaste">📋 Pegar enlace de vinculación</button><button class="btn" data-a="goto-ajustes">Configurar desde cero</button><button class="btn" data-a="demo">Ver datos de ejemplo</button></div></div>`;
 }
 async function initCloud(){
   if(await cloudFromLink()) return;   // abierta con un enlace de vinculación
@@ -1854,6 +1910,12 @@ function cloudCardHtml(){
     <div class="toolbar"><button class="btn primary" data-a="cloudlink">📱 Vincular otro dispositivo</button><button class="btn" data-a="cloudsync">Sincronizar ahora</button><button class="btn danger" data-a="clouddisconnect">Desconectar este dispositivo</button></div>
     <div class="hint">El token se guarda solo en este navegador${cloud.cfg.pass?", y la contraseña también (la marcaste como «recordar»)":"; la contraseña se te pedirá al abrir la app"}.</div>${help}</div>`;
   return `<div class="card" id="cloudcard"><h2>☁ Sincronización en la nube</h2>${intro}
+    <div class="linkbox">
+      <b>¿Ya la usas en otro dispositivo?</b>
+      <p class="muted" style="margin:4px 0 10px">Allí ve a <i>Ajustes → Vincular otro dispositivo → Copiar enlace</i>, y aquí pulsa:</p>
+      <button class="btn primary" data-a="cloudpaste">📋 Pegar enlace de vinculación</button>
+    </div>
+    <p style="margin:16px 0 8px"><b>O configúralo desde cero:</b></p>
     <div class="cloudform">
       <label class="f">Repositorio de datos (privado)<input class="txt" id="cloudrepo" placeholder="usuario/economia-hogar-datos" autocomplete="off" autocapitalize="off"></label>
       <label class="f">Token de GitHub · <a href="${TOKEN_URL}" target="_blank" rel="noopener">crear uno ↗</a><input class="txt" id="cloudtoken" type="password" placeholder="github_pat_…" autocomplete="off"></label>
@@ -1871,6 +1933,7 @@ function cloudFlush(){ if(cloud.on&&cloud.dirty){ clearTimeout(cloud.t); cloudPu
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") cloudPull(); else cloudFlush(); });
 addEventListener("pagehide",cloudFlush);
 addEventListener("online",()=>{ if(cloud.on) cloudPull(); });
+addEventListener("hashchange",()=>{ if(location.hash.startsWith("#vincular=")) cloudFromLink(); });   // enlace abierto con la app ya cargada
 cloud.cfg=cloudLoadCfg();   // ¿este dispositivo ya está conectado a la nube?
 save();   // persiste la migración de ids, si la hubo
 render();
