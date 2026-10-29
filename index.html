@@ -311,7 +311,8 @@ async function pushServer(){
 }
 function setStatus(st){
   srv.state=st; const el=document.getElementById("status"); if(!el) return;
-  el.textContent = st==="file"?"● Guardado en datos.json":st==="error"?"● Error al guardar en datos.json":st==="conflict"?"● Datos cambiados en otra pestaña: pulsa para recargar":(cloud.cfg?"● En este dispositivo":"● Solo en este navegador");
+  el.textContent = st==="file"?"● Guardado en datos.json":st==="error"?"● Error al guardar en datos.json":st==="conflict"?"● Datos cambiados en otra pestaña: pulsa para recargar":"● Solo en este navegador";
+  el.hidden = st==="local" && !!cloud.cfg;   // con la nube conectada ya lo dice el estado de sincronización
   el.style.color = st==="file"?"var(--ok)":st==="local"?"var(--muted)":"var(--bad)";
   el.style.cursor = st==="conflict"?"pointer":"";
   el.title = st==="local"?"Abre la app con Abrir.command para guardar en un archivo JSON":"";
