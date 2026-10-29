@@ -2,59 +2,84 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Seguridad: la página solo puede hablar con su propio origen y con la API de GitHub (nada de terceros) -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <title>Economía del Hogar</title>
-<meta name="theme-color" content="#1f7a5c">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Economía">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
 :root{
-  --bg:#f6f5f1; --card:#ffffff; --ink:#1d2421; --muted:#6b7570; --line:#e3e1d9;
-  --accent:#1f7a5c; --accent-ink:#ffffff; --soft:#e8f3ee; --stripe:#f3f1ea; --line2:#d9d6ca;
-  --inc:#1f7a5c; --exp:#d9622b; --sav:#2b6cb0;
-  --ok:#1f7a5c; --warn:#b7791f; --bad:#c0392b;
-  --c1:#1f7a5c; --c2:#2b6cb0; --c3:#d9622b; --c4:#8e5bb5; --c5:#c9a227; --c6:#2a9d9d; --c7:#c2557a; --c8:#7a8a3a; --c9:#5f6b7a;
+  --bg:#f2f2f7; --card:#ffffff; --ink:#000000; --muted:#6e6e73; --line:#e5e5ea;
+  --accent:#248a3d; --accent-ink:#ffffff; --soft:#e4f3e8; --stripe:#f7f7fa; --line2:#d1d1d6;
+  --fill:rgba(118,118,128,.12); --fill2:rgba(118,118,128,.08); --glass:rgba(255,255,255,.72); --seg:#ffffff;
+  --inc:#248a3d; --exp:#c93400; --sav:#0071e3;
+  --ok:#248a3d; --warn:#b25000; --bad:#d70015;
+  --c1:#34c759; --c2:#007aff; --c3:#ff9500; --c4:#af52de; --c5:#ffcc00; --c6:#30b0c7; --c7:#ff2d55; --c8:#5856d6; --c9:#8e8e93;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#141917; --card:#1d2321; --ink:#e8ece9; --muted:#97a29c; --line:#2d3532;
-    --accent:#3fb88d; --accent-ink:#0d1512; --soft:#1f2e28; --stripe:#2b3431; --line2:#46524d;
-    --inc:#3fb88d; --exp:#f08a58; --sav:#6aa8e8;
-    --ok:#3fb88d; --warn:#e0b04a; --bad:#ef7a6c;
-    --c1:#3fb88d; --c2:#6aa8e8; --c3:#f08a58; --c4:#b88ae0; --c5:#e0c050; --c6:#4cc4c4; --c7:#e27ea0; --c8:#a7b85c; --c9:#9aa7b8;
+    --bg:#000000; --card:#1c1c1e; --ink:#ffffff; --muted:#98989f; --line:#38383a;
+    --accent:#30d158; --accent-ink:#000000; --soft:#14301d; --stripe:#232325; --line2:#48484a;
+    --fill:rgba(118,118,128,.24); --fill2:rgba(118,118,128,.16); --glass:rgba(30,30,32,.72); --seg:#636366;
+    --inc:#30d158; --exp:#ff9f0a; --sav:#0a84ff;
+    --ok:#30d158; --warn:#ffd60a; --bad:#ff453a;
+    --c1:#30d158; --c2:#0a84ff; --c3:#ff9f0a; --c4:#bf5af2; --c5:#ffd60a; --c6:#40c8e0; --c7:#ff375f; --c8:#5e5ce6; --c9:#98989d;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#141917; --card:#1d2321; --ink:#e8ece9; --muted:#97a29c; --line:#2d3532;
-  --accent:#3fb88d; --accent-ink:#0d1512; --soft:#1f2e28; --stripe:#2b3431; --line2:#46524d;
-  --inc:#3fb88d; --exp:#f08a58; --sav:#6aa8e8;
-  --ok:#3fb88d; --warn:#e0b04a; --bad:#ef7a6c;
-  --c1:#3fb88d; --c2:#6aa8e8; --c3:#f08a58; --c4:#b88ae0; --c5:#e0c050; --c6:#4cc4c4; --c7:#e27ea0; --c8:#a7b85c; --c9:#9aa7b8;
+  --bg:#000000; --card:#1c1c1e; --ink:#ffffff; --muted:#98989f; --line:#38383a;
+  --accent:#30d158; --accent-ink:#000000; --soft:#14301d; --stripe:#232325; --line2:#48484a;
+  --fill:rgba(118,118,128,.24); --fill2:rgba(118,118,128,.16); --glass:rgba(30,30,32,.72); --seg:#636366;
+  --inc:#30d158; --exp:#ff9f0a; --sav:#0a84ff;
+  --ok:#30d158; --warn:#ffd60a; --bad:#ff453a;
+  --c1:#30d158; --c2:#0a84ff; --c3:#ff9f0a; --c4:#bf5af2; --c5:#ffd60a; --c6:#40c8e0; --c7:#ff375f; --c8:#5e5ce6; --c9:#98989d;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+/* Estilo según las guías de Apple (Human Interface Guidelines): colores y tipografía del sistema,
+   superficies agrupadas, controles rellenos y, en el iPhone, barra de pestañas abajo y título grande. */
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+button,select,input,textarea,a{touch-action:manipulation}   /* sin la espera del doble toque */
+/* el desenfoque va en una capa aparte: en la propia cabecera haría que la barra de pestañas (fija) se colocase dentro de ella */
+header{position:sticky;top:0;z-index:5;border-bottom:.5px solid var(--line2);padding-top:env(safe-area-inset-top)}
+header::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);transition:opacity .2s}
 .bar{max-width:1180px;margin:0 auto;padding:10px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.brand{font-weight:700;font-size:17px;margin-right:auto}
+.brand{font-weight:700;font-size:17px;margin-right:auto;letter-spacing:-.01em}
+.navtitle{display:none}
 nav{display:flex;gap:4px;max-width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 nav::-webkit-scrollbar{display:none}
+nav svg{display:none}
 nav .sh{display:none}
-nav button{border:0;background:none;color:var(--muted);padding:8px 14px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;flex:0 0 auto}
-@media(max-width:720px){   /* móvil: cabecera compacta y pestañas desplazables en una sola línea */
-  .bar{gap:6px 12px;padding:8px 12px}
-  .brand{margin-right:0}
-  nav{order:5;flex:1 1 100%}
-  nav{gap:2px}
-  nav button{padding:8px 9px}
-  nav .lg{display:none} nav .sh{display:inline}   /* nombres cortos para que quepan las cinco pestañas */
+nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;flex:0 0 auto}
+.ltitle{display:none}
+@media(max-width:720px){   /* iPhone: barra de pestañas flotante abajo y título grande arriba, como las apps de iOS */
+  body{font-size:16px}
+  .bar{padding:6px 16px;min-height:44px;gap:6px 10px;justify-content:flex-end;position:relative}
+  .brand{display:none}
+  .navtitle{display:block;position:absolute;left:50%;transform:translateX(-50%);font-weight:600;font-size:17px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+  header{border-bottom-color:transparent;transition:border-color .2s}
+  header:not(.scrolled)::before{opacity:0}
+  header.scrolled{border-bottom-color:var(--line2)}
+  header.scrolled .navtitle{opacity:1}
+  header.scrolled #status,header.scrolled #cloudstatus{opacity:0}
+  #status,#cloudstatus{font-size:12px;transition:opacity .2s}
+  .ltitle{display:block;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:.01em;margin:0 4px 12px}
+  nav{position:fixed;z-index:20;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 6px);justify-content:space-around;gap:0;padding:6px;
+      border-radius:999px;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);
+      border:.5px solid var(--line2);box-shadow:0 8px 30px rgba(0,0,0,.12),0 1px 3px rgba(0,0,0,.08);overflow:visible}
+  nav button{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;min-height:50px;font-size:10px;font-weight:600;color:var(--muted)}
+  nav svg{display:block;width:24px;height:24px}
+  #nav button.on{background:var(--fill);color:var(--accent)}
+  nav .lg{display:none} nav .sh{display:inline}
+  main{padding-bottom:calc(env(safe-area-inset-bottom) + 96px)!important}
   /* «Datos del mes» en móvil: sin columna «Dif.» y con campos más compactos para que se lean los importes enteros */
   .dt th:nth-child(4),.dt td:nth-child(4){display:none}
   .dt td.n{width:auto;min-width:96px}
@@ -62,31 +87,38 @@ nav button{border:0;background:none;color:var(--muted);padding:8px 14px;border-r
   td .dueinfo{white-space:normal}   /* «Próximo cobro: …» pasa a dos líneas en vez de ensanchar la tabla */
   /* iPhone amplía la página al tocar un campo con letra de menos de 16 px */
   input,select,textarea{font-size:16px!important}
-  main{padding:12px}
-  .card{padding:14px}
+  main{padding:4px 16px}
+  .card{padding:16px}
+  button.btn,select,input[type=month]{min-height:44px}   /* zona táctil mínima de 44 pt */
+  .seg button{min-height:36px}
 }
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}   /* sin letra agrandada al girar el móvil */
-nav button.on{background:var(--soft);color:var(--accent)}
+nav button.on{background:var(--fill);color:var(--ink)}
 main{max-width:1180px;margin:0 auto;padding:16px}
-h2{font-size:16px;margin:0 0 10px}
+h2{font-size:17px;font-weight:600;margin:0 0 10px;letter-spacing:-.01em}
 h3{font-size:13px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,40,30,.04),0 6px 20px rgba(20,40,30,.035)}
+.card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:16px}
 .grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
 .side{position:sticky;top:72px}
 @media(max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}.side{position:static}}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
-button.btn,select,input[type=month]{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:8px;cursor:pointer}
-button.btn:hover{border-color:var(--accent)}
-button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.btn,select,input[type=month]{font:inherit;border:0;background-color:var(--fill);color:var(--ink);padding:8px 14px;border-radius:10px;cursor:pointer}
+button.btn{color:var(--accent);font-weight:500}
+select{-webkit-appearance:none;appearance:none;padding-right:30px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+@media(hover:hover){button.btn:hover{filter:brightness(.96)}}
+button.btn:active{opacity:.6}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
 button.danger{color:var(--bad)}
 button.icon{padding:6px 10px}
-input.num,input.txt,textarea,select.sm{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%}
+input.num,input.txt,textarea,select.sm{font:inherit;color:var(--ink);background-color:var(--fill2);border:0;border-radius:8px;padding:7px 9px;width:100%}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
 input.num{text-align:right;font-variant-numeric:tabular-nums}
 input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input:focus,textarea:focus{background-color:var(--card)}
 table{width:100%;border-collapse:collapse}
 th{font-size:12px;color:var(--muted);text-align:right;font-weight:600;padding:4px 6px}
 th:first-child,td:first-child{text-align:left}
-td{padding:3px 4px;border-top:1px solid var(--line)}
+td{padding:4px 4px;border-top:.5px solid var(--line2)}
 td.n{width:124px}
 td.d{width:112px;text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
 .pos{color:var(--ok)}.neg{color:var(--bad)}
@@ -95,15 +127,15 @@ td.d{width:112px;text-align:right;font-variant-numeric:tabular-nums;font-size:13
 .muted{color:var(--muted);font-size:13px}
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.kpi{background:var(--card);border-radius:16px;padding:14px 16px}
 .kpi .l{font-size:12px;color:var(--muted)}
-.kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .v{font-family:ui-rounded,-apple-system,sans-serif;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .kpi .s{font-size:12px;color:var(--muted)}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
 .meter{margin:10px 0}
 .meter .top{display:flex;justify-content:space-between;font-size:13px}
-.track{height:10px;background:var(--bg);border-radius:6px;position:relative;overflow:hidden;margin-top:4px;border:1px solid var(--line)}
-.fill{height:100%;border-radius:6px}
+.track{height:8px;background:var(--fill);border-radius:999px;position:relative;overflow:hidden;margin-top:6px}
+.fill{height:100%;border-radius:999px}
 .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.5}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;margin-top:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
@@ -111,18 +143,19 @@ td.d{width:112px;text-align:right;font-variant-numeric:tabular-nums;font-size:13
 .ins:first-of-type{border-top:0}
 .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none}
 svg text{fill:var(--muted);font-size:11px}
+@media(max-width:720px){svg text{font-size:19px}}   /* las gráficas se ven a la mitad de tamaño en el iPhone */
 svg .grid line{stroke:var(--line)}
 .empty{text-align:center;color:var(--muted);padding:40px 16px}
 /* --- Ajustes: tarjetas de partida con panel de opciones --- */
-.catitem{--g:var(--line);background:var(--card);border:1px solid var(--line);border-left:4px solid var(--g);border-radius:12px;margin-bottom:8px;transition:box-shadow .15s}
+.catitem{--g:var(--line);background:var(--card);border:0;border-left:4px solid var(--g);border-radius:12px;margin-bottom:8px;transition:box-shadow .15s}
 .catitem[data-g=need]{--g:var(--sav)}
 .catitem[data-g=want]{--g:var(--exp)}
 .catitem[data-g=save]{--g:var(--accent)}
-.catitem:hover{box-shadow:0 2px 10px rgba(20,40,30,.07)}
-.catitem.open{box-shadow:0 6px 22px rgba(20,40,30,.10)}
+@media(hover:hover){.catitem:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}}
+.catitem.open{box-shadow:0 6px 22px rgba(0,0,0,.10)}
 .catitem.over{outline:2px dashed var(--accent);outline-offset:2px}
 .catitem.dragging{opacity:.4}
-.famhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:20px 0 8px;padding:8px 12px;border-radius:10px;background:var(--soft);border:1px dashed transparent}
+.famhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:20px 0 8px;padding:8px 12px;border-radius:12px;background:var(--soft);border:1px dashed transparent}
 .famhead:first-child{margin-top:4px}
 .famhead.over,.famlist.over{border-color:var(--accent);outline:2px dashed var(--accent);outline-offset:2px;border-radius:10px}
 .famhead .famname{flex:1 1 220px;max-width:340px;font-weight:700;font-size:15px;background:transparent!important;border-color:transparent!important}
@@ -130,20 +163,19 @@ svg .grid line{stroke:var(--line)}
 .famname-static{font-weight:700;font-size:15px;color:var(--muted)}
 .famact{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
 .famempty{padding:14px;font-size:13px;border:1px dashed var(--line2);border-radius:10px}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;vertical-align:middle}
-.seg button{border:0;background:var(--card);padding:7px 14px;font:inherit;font-size:13px;cursor:pointer;color:var(--muted)}
-.seg button+button{border-left:1px solid var(--line)}
-.seg button.on{background:var(--soft);color:var(--accent);font-weight:700}
+.seg{display:inline-flex;gap:2px;padding:2px;border-radius:10px;background:var(--fill);vertical-align:middle}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:8px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink)}
+.seg button.on{background:var(--seg);font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
 tr.famrow td{background:var(--soft);font-weight:700;font-size:13px;padding:7px 8px;border-top:2px solid var(--line)}
 tr.famrow td:not(:first-child){text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
-.catitem{border-color:var(--line2);margin-bottom:10px}
+.catitem{margin-bottom:10px;box-shadow:0 0 0 .5px var(--line2)}
 .catitem:nth-child(odd){background:var(--stripe)}
-.catitem:hover{background:var(--soft)}
-.catitem:focus-within{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent),0 6px 18px rgba(20,40,30,.10)}
-.catitem.open{background:var(--card);border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent),0 8px 24px rgba(20,40,30,.12)}
+@media(hover:hover){.catitem:hover{background:var(--soft)}}
+.catitem:focus-within{box-shadow:0 0 0 1.5px var(--accent),0 6px 18px rgba(0,0,0,.08)}
+.catitem.open{background:var(--card);box-shadow:0 0 0 1.5px var(--accent),0 8px 24px rgba(0,0,0,.10)}
 .rowno{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--g);color:var(--accent-ink);font-size:11.5px;font-weight:700;display:grid;place-items:center}
 .goalcard:nth-of-type(odd),.rulecard:nth-of-type(odd){background:var(--stripe)}
-.goalcard,.rulecard{border-color:var(--line2);border-left-color:var(--accent)}
+.goalcard,.rulecard{border-left-color:var(--accent)}
 .cathead{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .cmain{flex:1 1 0;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}   /* nombre + etiquetas: las etiquetas bajan a otra línea si no caben */
 @media(max-width:720px){   /* móvil: arriba nombre y etiquetas; debajo, importe y Opciones */
@@ -154,11 +186,11 @@ tr.famrow td:not(:first-child){text-align:right;font-weight:600;font-variant-num
 .catname{flex:0 1 250px;min-width:140px;font-weight:600;font-size:15px;background:transparent!important;border-color:transparent!important}
 .catname:hover,.catname:focus{background:var(--bg)!important;border-color:var(--line)!important}
 .chips{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
-.chip{font-size:11.5px;line-height:1;padding:5px 10px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
-.chip.g-need{color:var(--sav);border-color:var(--sav);background:transparent}
-.chip.g-want{color:var(--exp);border-color:var(--exp);background:transparent}
-.chip.g-save{color:var(--accent);border-color:var(--accent);background:transparent}
-.chip.acc{background:var(--soft);color:var(--accent);border-color:transparent;font-weight:600}
+.chip{font-size:12px;line-height:1;padding:5px 10px;border-radius:999px;background:var(--fill);color:var(--muted);white-space:nowrap;font-weight:500}
+.chip.g-need{color:var(--sav);background:color-mix(in srgb,var(--sav) 14%,transparent)}
+.chip.g-want{color:var(--exp);background:color-mix(in srgb,var(--exp) 14%,transparent)}
+.chip.g-save{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.chip.acc{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-weight:600}
 .amt{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 .amt input{width:122px}
 .amt small{color:var(--muted);font-size:11.5px;width:58px;white-space:nowrap}
@@ -176,7 +208,7 @@ tr.famrow td:not(:first-child){text-align:right;font-weight:600;font-variant-num
 .btn.sm{padding:6px 11px;font-size:13px}
 .btn.danger.sm{margin-left:auto}
 .btn.ghost{background:transparent}
-.goalcard,.rulecard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px;margin-bottom:10px}
+.goalcard,.rulecard{background:var(--card);border:0;border-left:4px solid var(--accent);box-shadow:0 0 0 .5px var(--line2);border-radius:12px;padding:14px;margin-bottom:10px}
 .goalcard .catactions{margin-top:12px;padding-top:0;border-top:0}
 .rulecard{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-left-color:var(--c4)}
 .rulecard input{flex:1 1 160px;max-width:240px}
@@ -197,7 +229,7 @@ details.help ul{margin:8px 0 0;padding-left:18px;line-height:1.55}
 @media(max-width:800px){.txform{grid-template-columns:1fr 1fr}}
 .flash{background:var(--soft);border-color:var(--accent)}
 .impmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}
-.impscroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.impscroll{max-height:420px;overflow:auto;border:.5px solid var(--line2);border-radius:12px}
 table.imp td,table.imp th{padding:4px 8px;text-align:left}
 table.imp th:last-child{text-align:right}
 table.imp tr.dup{opacity:.55}
@@ -210,17 +242,18 @@ table.sum td:first-child,table.sum th:first-child{text-align:left;white-space:no
 table.sum tr.big td{font-size:15px;font-weight:700;border-top:2px solid var(--line)}
 table.sum tr.muted td:first-child{color:var(--muted)}
 .kpi .v.sm{font-size:17px;line-height:1.5}
-.tag{font-size:11px;padding:1px 7px;border-radius:10px;margin-left:6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
-.tag.need{color:var(--sav);border-color:var(--sav)}
-.tag.want{color:var(--exp);border-color:var(--exp)}
-table.mx td,table.mx th{padding:6px 8px;text-align:right;border-top:1px solid var(--line)}
+.tag{font-size:11.5px;font-weight:500;padding:2px 8px;border-radius:999px;margin-left:6px;background:var(--fill);color:var(--muted);white-space:nowrap}
+.tag.need{color:var(--sav);background:color-mix(in srgb,var(--sav) 14%,transparent)}
+.tag.want{color:var(--exp);background:color-mix(in srgb,var(--exp) 14%,transparent)}
+table.mx td,table.mx th{padding:8px;text-align:right;border-top:.5px solid var(--line2)}
 table.mx td:first-child,table.mx th:first-child{text-align:left;white-space:nowrap}
 table.mx td:last-child{white-space:nowrap}
 .cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 label.f{display:block;font-size:12px;color:var(--muted)}
 #cloudstatus{margin-left:2px}
-dialog{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--card);color:var(--ink);width:min(92vw,380px)}
-dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog{border:0;border-radius:20px;padding:20px;background:var(--card);color:var(--ink);width:min(92vw,400px);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+@media(max-width:720px){dialog{margin:auto auto calc(env(safe-area-inset-bottom) + 8px);width:calc(100vw - 16px);max-width:none;border-radius:28px}}   /* hoja inferior, como en iOS */
 dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;letter-spacing:0}
 .cloudform{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 .cloudform .f{display:block;font-size:12px;font-weight:600;color:var(--muted)}
@@ -230,14 +263,16 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
 <body>
 <header><div class="bar">
   <div class="brand">🏠 Economía del Hogar</div>
+  <div class="navtitle" id="navtitle" aria-hidden="true"></div>
   <span id="status" class="muted"></span>
   <span id="cloudstatus" class="muted" role="status"></span>
   <nav id="nav">
-    <button data-p="datos"><span class="lg">Datos del mes</span><span class="sh">Mes</span></button>
-    <button data-p="movs"><span class="lg">Movimientos</span><span class="sh">Movim.</span></button>
-    <button data-p="panel">Panel</button>
-    <button data-p="anual">Anual</button>
-    <button data-p="ajustes">Ajustes</button>
+    <!-- iconos al estilo SF Symbols; solo se ven en la barra de pestañas del iPhone -->
+    <button data-p="datos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span class="lg">Datos del mes</span><span class="sh">Mes</span></button>
+    <button data-p="movs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.75" cy="6.5" r="1.1" fill="currentColor"/><circle cx="4.75" cy="12" r="1.1" fill="currentColor"/><circle cx="4.75" cy="17.5" r="1.1" fill="currentColor"/></svg><span class="lg">Movimientos</span><span class="sh">Movimientos</span></button>
+    <button data-p="panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M14.5 2.5a7.5 7.5 0 0 1 7 7h-7z"/></svg><span>Panel</span></button>
+    <button data-p="anual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 20V13M10 20V8M15 20v-5M20 20V4"/></svg><span>Anual</span></button>
+    <button data-p="ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg><span>Ajustes</span></button>
   </nav>
 </div></header>
 <main id="app"></main>
@@ -488,12 +523,16 @@ function series(end,n){ return Array.from({length:n},(_,i)=>shiftMonth(end,i-n+1
 
 /* ---------- Router ---------- */
 function go(p){ ui.page=p; render(); window.scrollTo(0,0); }
+const PAGE_TITLES={datos:"Datos del mes",movs:"Movimientos",panel:"Panel",anual:"Anual",ajustes:"Ajustes"};
 function render(){
-  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.p===ui.page));
-  const app=document.getElementById("app");
-  app.innerHTML = ({datos:pageDatos,movs:pageMov,panel:pagePanel,anual:pageAnual,ajustes:pageAjustes}[ui.page]||pageDatos)();
+  document.querySelectorAll("#nav button").forEach(b=>{ const on=b.dataset.p===ui.page; b.classList.toggle("on",on); b.setAttribute("aria-current",on?"page":"false"); });
+  const app=document.getElementById("app"), title=PAGE_TITLES[ui.page]||PAGE_TITLES.datos;
+  document.getElementById("navtitle").textContent=title;
+  // título grande (solo en el iPhone): al desplazarse, pasa a la cabecera en pequeño, como en iOS
+  app.innerHTML = `<h1 class="ltitle">${title}</h1>` + ({datos:pageDatos,movs:pageMov,panel:pagePanel,anual:pageAnual,ajustes:pageAjustes}[ui.page]||pageDatos)();
   if(ui.page==="datos") updateSummary();
 }
+addEventListener("scroll",()=>{ document.querySelector("header").classList.toggle("scrolled",scrollY>40); },{passive:true});
 document.getElementById("nav").onclick=e=>{ const b=e.target.closest("[data-p]"); if(b) go(b.dataset.p); };
 
 /* ---------- Página: datos del mes ---------- */
@@ -1025,6 +1064,7 @@ function pageAnual(){
   ${ann?`<div class="card"><h2>Gastos trimestrales y anuales repartidos</h2><div class="tscroll"><table class="mx"><thead><tr><th>Gasto</th><th>Periodicidad</th><th>Importe del cobro</th><th>Provisión/mes</th><th>Provisionado</th><th>Pagado</th><th>Saldo del fondo</th></tr></thead><tbody>${ann}</tbody></table></div>
     <div class="hint">En el presupuesto de cada mes se reserva la parte proporcional (1/3 o 1/12); el gasto real es lo que pagas realmente, cuando lo pagas. «Saldo del fondo» es lo que deberías tener apartado para los próximos pagos (en rojo, has pagado más de lo reservado hasta ahora).</div></div>`:""}`;
 }
+const axEur=v=>Math.abs(v)>=1000?(v/1000).toLocaleString("es-ES",{maximumFractionDigits:1})+" k€":Math.round(v)+" €";   // ejes: «2,5 k€»
 function niceMax(v){ if(v<=0) return 1; const p=Math.pow(10,Math.floor(Math.log10(v))); const n=v/p; return (n<=1?1:n<=2?2:n<=5?5:10)*p; }
 function trendChart(keys,T){
   const W=640,H=270,L=88,R=10,Tp=12,B=28,n=keys.length;
@@ -1033,7 +1073,7 @@ function trendChart(keys,T){
   const lo=minV<0?-niceMax(-minV):0;
   const y=v=>Tp+(H-Tp-B)*(1-(v-lo)/(maxV-lo)), gw=(W-L-R)/n, bw=Math.min(22,gw/3);
   let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Ingresos, gastos y ahorro por mes">`;
-  for(let i=0;i<=4;i++){ const v=lo+(maxV-lo)*i/4; s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${eur(v,2)}</text>`; }
+  for(let i=0;i<=4;i++){ const v=lo+(maxV-lo)*i/4; s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${axEur(v)}</text>`; }
   const pts=[];
   T.forEach((x,i)=>{
     const cx=L+gw*i+gw/2;
@@ -1104,7 +1144,7 @@ function netChart(keys,T){
   const W=640,H=230,L=88,R=14,Tp=12,B=28, vals=pts.map(p=>p.t.net), mx=Math.max(...vals), mn=Math.min(...vals), pad=(mx-mn||Math.abs(mx)||1)*.15, hi=mx+pad, lo=mn-pad;
   const x=i=>L+(W-L-R)*i/(pts.length-1), y=v=>Tp+(H-Tp-B)*(1-(v-lo)/(hi-lo));
   let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Evolución del patrimonio neto">`;
-  for(let i=0;i<=3;i++){ const v=lo+(hi-lo)*i/3; s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${eur(v,2)}</text>`; }
+  for(let i=0;i<=3;i++){ const v=lo+(hi-lo)*i/3; s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${axEur(v)}</text>`; }
   s+=`<polyline fill="none" stroke="var(--accent)" stroke-width="2.5" points="${pts.map((p,i)=>x(i)+","+y(p.t.net)).join(" ")}"/>`;
   pts.forEach((p,i)=>{ s+=`<circle cx="${x(i)}" cy="${y(p.t.net)}" r="4" fill="var(--accent)" stroke="var(--card)" stroke-width="1.5"><title>${monthLabel(p.k)} · ${eur(p.t.net)}</title></circle>`;
     if(pts.length<=12||i%2===0) s+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${monthLabel(p.k,true)}</text>`; });
