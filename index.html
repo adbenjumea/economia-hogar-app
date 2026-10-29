@@ -75,18 +75,23 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   header::before{display:none}
   header.scrolled{border-bottom-color:var(--line2)}
   /* bajo la barra de pestañas, el contenido se funde con el fondo en vez de verse a medias */
-  body::after{content:"";position:fixed;z-index:4;left:0;right:0;bottom:0;height:calc(env(safe-area-inset-bottom) + 84px);pointer-events:none;
+  body::after{content:"";position:fixed;z-index:4;left:0;right:0;bottom:0;height:calc(max(env(safe-area-inset-bottom),24px) + 84px);pointer-events:none;
     background:linear-gradient(to bottom,color-mix(in srgb,var(--bg) 0%,transparent),var(--bg) 45%)}
   header.scrolled .navtitle{opacity:1}
-  header.scrolled #status,header.scrolled #cloudstatus{opacity:0}
-  #status,#cloudstatus{font-size:12px;transition:opacity .2s}
+  /* en el iPhone el estado de guardado/sincronización va en la línea del título grande (.ltstat) */
+  header #status,header #cloudstatus{display:none}
+  .ltitle{display:flex!important;align-items:baseline;justify-content:space-between;gap:8px}
+  .ltitle>span:first-child{white-space:nowrap}
+  .ltstat{font-size:13px;font-weight:500;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;cursor:pointer}
+  .bar{min-height:40px}
+  .ltstat:empty{display:none}
   .ltitle{display:block;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:.01em;margin:0 4px 12px}
-  nav{position:fixed;z-index:20;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 6px);justify-content:space-around;gap:0;padding:6px;
-      border-radius:999px;background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);
-      border:.5px solid var(--line2);box-shadow:0 8px 30px rgba(0,0,0,.12),0 1px 3px rgba(0,0,0,.08);overflow:visible}
+  nav{position:fixed;z-index:20;left:12px;right:12px;bottom:max(calc(env(safe-area-inset-bottom) + 6px),30px);justify-content:space-around;gap:0;padding:6px;
+      border-radius:999px;overflow:visible;border:0}
+  nav.glass{box-shadow:var(--g-edge),0 10px 30px rgba(0,0,0,.14),0 1px 3px rgba(0,0,0,.08)}
   nav button{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;min-height:50px;font-size:10px;font-weight:600;color:var(--muted)}
   nav svg{display:block;width:24px;height:24px}
-  #nav button.on{background:var(--fill);color:var(--accent)}
+  #nav button.on{color:var(--accent)}
   .lg{display:none} .sh{display:inline}
   /* barra del mes compacta: [‹ Octubre 2026 ›] [Hoy] y debajo el resto, con controles más bajos */
   .toolbar{gap:8px;margin-bottom:12px}
@@ -95,7 +100,7 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   .toolbar button.btn,.toolbar select{min-height:36px;padding-top:5px;padding-bottom:5px;font-size:15px}
   .toolbar select{font-size:16px!important}
   .toolbar .seg button{min-height:32px;padding:4px 12px}
-  main{padding-bottom:calc(env(safe-area-inset-bottom) + 96px)!important}
+  main{padding-bottom:calc(max(env(safe-area-inset-bottom),24px) + 96px)!important}
   /* «Datos del mes» en móvil: sin columna «Dif.» y con campos más compactos para que se lean los importes enteros */
   .dt th:nth-child(4),.dt td:nth-child(4){display:none}
   .dt td.n{width:auto;min-width:96px}
@@ -109,7 +114,41 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   .seg button{min-height:36px}
 }
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}   /* sin letra agrandada al girar el móvil */
-nav button.on{background:var(--fill);color:var(--ink)}
+nav button.on{color:var(--ink)}
+/* ---------- Liquid Glass (aproximación web) ----------
+   Vidrio: fondo muy translúcido + desenfoque con saturación + borde especular (luz arriba, sombra abajo).
+   Movimiento: «muelle» con un pequeño rebote, como en iOS 26. */
+:root{--spring:cubic-bezier(.34,1.45,.64,1);--g-tint:rgba(255,255,255,.55);--g-lens:rgba(255,255,255,.75);
+  --g-edge:inset 0 1px 0 rgba(255,255,255,.85),inset 0 -1px 0 rgba(0,0,0,.06),inset 0 0 0 .5px rgba(0,0,0,.08)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--g-tint:rgba(40,40,44,.55);--g-lens:rgba(255,255,255,.14);
+  --g-edge:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.12)}}
+:root[data-theme="dark"]{--g-tint:rgba(40,40,44,.55);--g-lens:rgba(255,255,255,.14);
+  --g-edge:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -1px 0 rgba(0,0,0,.4),inset 0 0 0 .5px rgba(255,255,255,.12)}
+.glass{background:var(--g-tint);-webkit-backdrop-filter:blur(16px) saturate(190%) brightness(1.04);backdrop-filter:blur(16px) saturate(190%) brightness(1.04);box-shadow:var(--g-edge)}
+@media(min-width:721px){nav{position:relative} nav.glass{background:none;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}}
+nav button{position:relative;z-index:1;transition:color .25s,transform .35s var(--spring)}
+nav button:active{transform:scale(.92)}
+/* la «lente» que marca la pestaña activa y se desliza entre pestañas */
+.navpill{position:absolute;z-index:0;top:0;left:0;height:0;border-radius:999px;pointer-events:none;background:var(--fill);
+  transition:transform .5s var(--spring),width .5s var(--spring)}
+.navpill.noanim{transition:none}
+@media(max-width:720px){.navpill{background:var(--g-lens);box-shadow:var(--g-edge),0 2px 8px rgba(0,0,0,.08)}}
+/* botones y controles: ceden al pulsar y vuelven con muelle */
+button.btn,.seg button,.mpick .btn{transition:transform .35s var(--spring),background-color .2s,filter .2s}
+button.btn:active,.seg button:active{transform:scale(.95);opacity:1}
+.seg button.on{box-shadow:var(--g-edge),0 3px 8px rgba(0,0,0,.12)}
+button.primary{box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(0,0,0,.12)}
+/* hojas y ventanas: vidrio y entrada con rebote */
+dialog{box-shadow:var(--g-edge),0 20px 60px rgba(0,0,0,.25)}
+dialog[open]{animation:sheetin .5s var(--spring)}
+dialog[open]::backdrop{animation:fadein .3s ease}
+@keyframes sheetin{from{transform:translateY(24px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadein{from{opacity:0}}
+/* cambio de pestaña: el contenido entra suavemente */
+#app.enter{animation:pagein .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes pagein{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media (prefers-reduced-transparency: reduce){.glass,nav.glass{background:var(--card);-webkit-backdrop-filter:none;backdrop-filter:none}}
 main{max-width:1180px;margin:0 auto;padding:16px}
 h2{font-size:17px;font-weight:600;margin:0 0 10px;letter-spacing:-.01em}
 h3{font-size:13px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -304,7 +343,7 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
   <div class="navtitle" id="navtitle" aria-hidden="true"></div>
   <span id="status" class="muted"></span>
   <span id="cloudstatus" class="muted" role="status"></span>
-  <nav id="nav">
+  <nav id="nav" class="glass"><span class="navpill" aria-hidden="true"></span>
     <!-- iconos al estilo SF Symbols; solo se ven en la barra de pestañas del iPhone -->
     <button data-p="datos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span class="lg">Datos del mes</span><span class="sh">Mes</span></button>
     <button data-p="movs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.75" cy="6.5" r="1.1" fill="currentColor"/><circle cx="4.75" cy="12" r="1.1" fill="currentColor"/><circle cx="4.75" cy="17.5" r="1.1" fill="currentColor"/></svg><span class="lg">Movimientos</span><span class="sh">Movimientos</span></button>
@@ -560,16 +599,39 @@ function totals(k){
 function series(end,n){ return Array.from({length:n},(_,i)=>shiftMonth(end,i-n+1)); }
 
 /* ---------- Router ---------- */
-function go(p){ ui.page=p; render(); window.scrollTo(0,0); }
+function go(p){
+  const changed=ui.page!==p; ui.page=p; render(); window.scrollTo(0,0);
+  if(changed){ const a=document.getElementById("app"); a.classList.remove("enter"); void a.offsetWidth; a.classList.add("enter"); }
+}
+function placePill(anim){   // mueve la «lente» de cristal bajo la pestaña activa
+  const nav=document.getElementById("nav"), pill=nav&&nav.querySelector(".navpill"), b=nav&&nav.querySelector("button.on"); if(!pill||!b) return;
+  pill.classList.toggle("noanim",!anim);
+  pill.style.width=b.offsetWidth+"px"; pill.style.height=b.offsetHeight+"px";
+  pill.style.transform=`translate(${b.offsetLeft}px,${b.offsetTop}px)`;
+}
+addEventListener("resize",()=>placePill(false));
 const PAGE_TITLES={datos:"Datos del mes",movs:"Movimientos",panel:"Panel",anual:"Anual",ajustes:"Ajustes"};
 function render(){
   document.querySelectorAll("#nav button").forEach(b=>{ const on=b.dataset.p===ui.page; b.classList.toggle("on",on); b.setAttribute("aria-current",on?"page":"false"); });
+  placePill(!!render.done); render.done=true;
   const app=document.getElementById("app"), title=PAGE_TITLES[ui.page]||PAGE_TITLES.datos;
   document.getElementById("navtitle").textContent=title;
   // título grande (solo en el iPhone): al desplazarse, pasa a la cabecera en pequeño, como en iOS
-  app.innerHTML = `<h1 class="ltitle">${title}</h1>` + ({datos:pageDatos,movs:pageMov,panel:pagePanel,anual:pageAnual,ajustes:pageAjustes}[ui.page]||pageDatos)();
+  app.innerHTML = `<h1 class="ltitle"><span>${title}</span><span class="ltstat" role="status"></span></h1>` + ({datos:pageDatos,movs:pageMov,panel:pagePanel,anual:pageAnual,ajustes:pageAjustes}[ui.page]||pageDatos)();
+  mirrorStatus();
   if(ui.page==="datos") updateSummary();
 }
+// copia el estado de la cabecera (nube o archivo) junto al título grande; al pulsarlo actúa como el original
+function mirrorStatus(){
+  const t=document.querySelector(".ltstat"); if(!t) return;
+  const c=document.getElementById("cloudstatus"), s=document.getElementById("status");
+  const src=c&&c.textContent.trim()?c:(s&&!s.hidden&&s.textContent.trim()?s:null);
+  // versión corta: «☁ Sin conexión: se subirá…» → «☁ Sin conexión», «● Guardado en datos.json» → «● Guardado»
+  t.textContent=src?src.textContent.split(":")[0].replace(" en datos.json",""):""; t.title=src?src.textContent:"";
+  t.style.color=src?getComputedStyle(src).color:"";
+  t.onclick=src?()=>src.click():null;
+}
+new MutationObserver(mirrorStatus).observe(document.querySelector("header"),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:["style","class","hidden"]});
 addEventListener("scroll",()=>{ document.querySelector("header").classList.toggle("scrolled",scrollY>40); },{passive:true});
 document.getElementById("nav").onclick=e=>{ const b=e.target.closest("[data-p]"); if(b) go(b.dataset.p); };
 
