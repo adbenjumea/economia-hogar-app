@@ -130,9 +130,14 @@ nav button{position:relative;z-index:1;transition:color .25s,transform .35s var(
 nav button:active{transform:scale(.92)}
 /* la «lente» que marca la pestaña activa y se desliza entre pestañas */
 .navpill{position:absolute;z-index:0;top:0;left:0;height:0;border-radius:999px;pointer-events:none;background:var(--fill);
-  transition:transform .5s var(--spring),width .5s var(--spring)}
+  transition:transform .45s cubic-bezier(.3,1.1,.5,1),width .45s cubic-bezier(.3,1.1,.5,1),scale .4s var(--spring),box-shadow .3s}
+/* arrastrando: la lente crece y se estira con la velocidad, como una gota de agua */
+.navpill.noanim{transition:scale .12s linear,box-shadow .3s}
+.navpill.drag{box-shadow:var(--g-edge),0 8px 22px rgba(0,0,0,.2)!important}
+nav button.peek{color:var(--accent)!important}
 .navpill.noanim{transition:none}
-@media(max-width:720px){.navpill{background:var(--g-lens);box-shadow:var(--g-edge),0 2px 8px rgba(0,0,0,.08)}}
+@media(max-width:720px){.navpill{background:var(--g-lens);box-shadow:var(--g-edge),0 2px 8px rgba(0,0,0,.08)}
+  nav{touch-action:none;-webkit-user-select:none;user-select:none}}
 /* botones y controles: ceden al pulsar y vuelven con muelle */
 button.btn,.seg button,.mpick .btn{transition:transform .35s var(--spring),background-color .2s,filter .2s}
 button.btn:active,.seg button:active{transform:scale(.95);opacity:1}
@@ -606,9 +611,45 @@ function go(p){
 function placePill(anim){   // mueve la «lente» de cristal bajo la pestaña activa
   const nav=document.getElementById("nav"), pill=nav&&nav.querySelector(".navpill"), b=nav&&nav.querySelector("button.on"); if(!pill||!b) return;
   pill.classList.toggle("noanim",!anim);
+  const to=`translate(${b.offsetLeft}px,${b.offsetTop}px)`;
+  if(anim&&pill.style.transform&&pill.style.transform!==to){   // al cambiar de pestaña la lente se aplasta y se estira un instante
+    pill.style.scale="1.16 .9"; clearTimeout(placePill.t); placePill.t=setTimeout(()=>{ pill.style.scale=""; },170);
+  }
   pill.style.width=b.offsetWidth+"px"; pill.style.height=b.offsetHeight+"px";
-  pill.style.transform=`translate(${b.offsetLeft}px,${b.offsetTop}px)`;
+  pill.style.transform=to;
 }
+/* Arrastrar la lente por la barra de pestañas (iPhone): sigue al dedo, se estira con la velocidad y al soltar
+   se asienta con muelle en la pestaña más cercana. */
+(function(){
+  const nav=document.getElementById("nav"); let st=null; window.navDragged=false;
+  const btns=()=>[...nav.querySelectorAll("button")], pill=()=>nav.querySelector(".navpill");
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const nearest=(x,w)=>{ const c=x+w/2; return btns().reduce((m,b)=>Math.abs(b.offsetLeft+b.offsetWidth/2-c)<Math.abs(m.offsetLeft+m.offsetWidth/2-c)?b:m); };
+  nav.addEventListener("pointerdown",e=>{
+    if(!matchMedia("(max-width:720px)").matches||(e.pointerType==="mouse"&&e.button!==0)) return;
+    const on=nav.querySelector("button.on"); if(!on) return;
+    st={x0:e.clientX,last:e.clientX,t:e.timeStamp,v:0,left:on.offsetLeft,w:on.offsetWidth,top:on.offsetTop,drag:false,id:e.pointerId};
+  });
+  nav.addEventListener("pointermove",e=>{
+    if(!st||e.pointerId!==st.id) return;
+    const dx=e.clientX-st.x0, p=pill();
+    if(!st.drag){ if(Math.abs(dx)<8) return; st.drag=true; try{ nav.setPointerCapture(e.pointerId); }catch(_){} p.classList.add("noanim","drag"); }
+    const b=btns(), x=clamp(st.left+dx,b[0].offsetLeft,b[b.length-1].offsetLeft+b[b.length-1].offsetWidth-st.w);
+    st.v=st.v*.6+((e.clientX-st.last)/Math.max(1,e.timeStamp-st.t))*.4; st.last=e.clientX; st.t=e.timeStamp;
+    const s=Math.min(.1,Math.abs(st.v)*.08);   // estiramiento según la velocidad (limitado para no salirse de la barra)
+    p.style.transform=`translate(${x}px,${st.top}px)`; p.style.scale=`${1.06+s} ${1.06-s*.6}`;
+    const n=nearest(x,st.w); b.forEach(k=>k.classList.toggle("peek",k===n));
+  });
+  const end=e=>{
+    if(!st||e.pointerId!==st.id) return; const s=st; st=null;
+    if(!s.drag) return;
+    const p=pill(), m=/translate\(([-\d.]+)px/.exec(p.style.transform), x=m?parseFloat(m[1]):s.left, n=nearest(x,s.w);
+    btns().forEach(k=>k.classList.remove("peek")); p.classList.remove("noanim","drag"); p.style.scale="";
+    window.navDragged=true; setTimeout(()=>{ window.navDragged=false; },350);
+    if(e.type==="pointerup") go(n.dataset.p); else placePill(true);
+  };
+  nav.addEventListener("pointerup",end); nav.addEventListener("pointercancel",end);
+})();
 addEventListener("resize",()=>placePill(false));
 const PAGE_TITLES={datos:"Datos del mes",movs:"Movimientos",panel:"Panel",anual:"Anual",ajustes:"Ajustes"};
 function render(){
@@ -633,7 +674,7 @@ function mirrorStatus(){
 }
 new MutationObserver(mirrorStatus).observe(document.querySelector("header"),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:["style","class","hidden"]});
 addEventListener("scroll",()=>{ document.querySelector("header").classList.toggle("scrolled",scrollY>40); },{passive:true});
-document.getElementById("nav").onclick=e=>{ const b=e.target.closest("[data-p]"); if(b) go(b.dataset.p); };
+document.getElementById("nav").onclick=e=>{ if(window.navDragged) return; const b=e.target.closest("[data-p]"); if(b) go(b.dataset.p); };
 
 /* ---------- Página: datos del mes ---------- */
 function monthBar(extra=""){
