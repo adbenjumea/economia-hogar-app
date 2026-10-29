@@ -531,6 +531,7 @@ function pageDatos(){
       <td class="d" id="df-${c.id}"></td></tr>`;})||`<tr><td colspan="4" class="muted">Sin partidas (añádelas en Ajustes)</td></tr>`}
     </tbody></table></div>`;}).join("");
   return `${monthBar(`<button class="btn" data-a="copyprev" title="Copia los ingresos y los gastos fijos; los variables y los saldos se dejan vacíos">Copiar mes anterior</button><span class="seg" role="group" aria-label="Ordenar las partidas"><button class="${ui.sortMode==="group"?"":"on"}" data-a="sortmode" data-v="day">Orden: día de cobro</button><button class="${ui.sortMode==="group"?"on":""}" data-a="sortmode" data-v="group">Orden: categoría</button></span>`)}
+  ${welcomeHtml()}
   <div class="grid"><div>
     <div class="card"><h2>Ingresos</h2>
       <table><tbody>${inc||`<tr><td class="muted" colspan="3">Añade nóminas, pensiones, ayudas, alquileres, ingresos extra…</td></tr>`}</tbody></table>
@@ -1414,6 +1415,8 @@ document.addEventListener("click",e=>{
   }
   else if(a==="cloudconnect") cloudConnect();
   else if(a==="cloudsync") cloudSyncNow();
+  else if(a==="cloudlink") cloudMakeLink();
+  else if(a==="goto-ajustes"){ go("ajustes"); const c=document.getElementById("cloudcard"); if(c) c.scrollIntoView({block:"start"}); }
   else if(a==="clouddisconnect") cloudDisconnect();
   else if(a==="panelmode"){ ui.panelMode=b.dataset.v==="budget"?"budget":"real"; render(); }
   else if(a==="resetbud"){ delete ensureM(ui.month).budget[id]; save(); render(); }   // vuelve al presupuesto por defecto de Ajustes
@@ -1492,17 +1495,17 @@ async function cloudKey(pass,salt,saltB64,iter){
   const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
   cloud.keyCache={id,key}; return key;
 }
-async function cloudEncrypt(text,pass,saltB64){
+async function cloudEncrypt(text,pass,saltB64,aad=AAD){
   const salt=saltB64?b64d(saltB64):crypto.getRandomValues(new Uint8Array(16)), sb=saltB64||b64e(salt);
   const key=await cloudKey(pass,salt,sb,PBKDF2_ITER), iv=crypto.getRandomValues(new Uint8Array(12));
-  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:_enc.encode(AAD)},key,_enc.encode(text));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:_enc.encode(aad)},key,_enc.encode(text));
   return {v:1,app:"economia-hogar",kdf:"PBKDF2-SHA256",iter:PBKDF2_ITER,salt:sb,iv:b64e(iv),ct:b64e(ct)};
 }
-async function cloudDecrypt(env,pass){
+async function cloudDecrypt(env,pass,aad=AAD){
   if(!env||env.v!==1||!env.ct||!env.iv||!env.salt) throw cloudErr("format","El archivo de la nube no tiene el formato esperado.");
   const iter=Math.min(Math.max(+env.iter||PBKDF2_ITER,100000),2000000);   // límites, por si el archivo estuviera manipulado
   const key=await cloudKey(pass,b64d(env.salt),env.salt,iter);
-  try{ return _dec.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(env.iv),additionalData:_enc.encode(AAD)},key,b64d(env.ct))); }
+  try{ return _dec.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(env.iv),additionalData:_enc.encode(aad)},key,b64d(env.ct))); }
   catch(e){ throw cloudErr("pass","Contraseña de cifrado incorrecta (o el archivo está dañado)."); }
 }
 function askPass(msg){   // ventana para pedir la contraseña (no se muestra en pantalla)
@@ -1622,10 +1625,12 @@ async function cloudResolve(){
     }
   }catch(e){ cloudFail(e); }
 }
-async function cloudConnect(){
+async function cloudConnect(){   // desde el formulario de Ajustes
   const v=id=>(document.getElementById(id)||{}).value||"";
-  const repo=v("cloudrepo").trim().replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/$/,""), token=v("cloudtoken").trim(), pass=v("cloudpass"), pass2=v("cloudpass2");
-  const remember=!!(document.getElementById("cloudremember")||{}).checked;
+  return cloudConnectWith({repo:v("cloudrepo").trim().replace(/^https?:\/\/github\.com\//,"").replace(/\.git$/,"").replace(/\/$/,""),
+    token:v("cloudtoken").trim(), pass:v("cloudpass"), pass2:v("cloudpass2"), remember:!!(document.getElementById("cloudremember")||{}).checked});
+}
+async function cloudConnectWith({repo,token,pass,pass2,remember}){   // desde el formulario o desde un enlace de vinculación
   if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){ alert("Indica el repositorio como usuario/repositorio, por ejemplo mi-usuario/economia-hogar-datos."); return; }
   if(!token){ alert("Pega el token de GitHub."); return; }
   if(pass.length<8){ alert("La contraseña de cifrado debe tener al menos 8 caracteres."); return; }
@@ -1658,7 +1663,70 @@ function cloudDisconnect(){
   cloud.cfg=null; cloud.on=false; cloud.pass=null; cloud.keyCache=null; cloud.conflict=false; cloud.dirty=false; setCloud("off"); setStatus(srv.state); render();
 }
 function cloudSyncNow(){ if(!cloud.on) return; if(cloud.conflict) cloudResolve(); else cloudPull(); }
+/* --- Vincular otro dispositivo con un enlace: el repositorio y el token viajan CIFRADOS con tu contraseña --- */
+const LINK_AAD="economia-hogar-vincular-v1";
+const TOKEN_URL="https://github.com/settings/personal-access-tokens/new?name="+encodeURIComponent("Economía del Hogar (datos)")
+  +"&description="+encodeURIComponent("Sincronización cifrada de la app Economía del Hogar. Dar acceso SOLO al repositorio de datos.")+"&expires_in=366&contents=write";
+function b64urlEnc(s){ return b64e(_enc.encode(s)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+function b64urlDec(s){ s=s.replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="="; return _dec.decode(b64d(s)); }
+function appWebUrl(){   // la web publicada: la actual si ya estamos en ella; si no, la de GitHub Pages del dueño del repositorio de datos
+  if(location.protocol==="https:") return location.origin+location.pathname;
+  const owner=((cloud.cfg&&cloud.cfg.repo)||"").split("/")[0];
+  return `https://${owner}.github.io/economia-hogar-app/`;
+}
+async function cloudMakeLink(){
+  if(!cloud.cfg) return;
+  try{
+    const pass=await cloudPass();
+    const env=await cloudEncrypt(JSON.stringify({repo:cloud.cfg.repo,token:cloud.cfg.token}),pass,null,LINK_AAD);
+    showLinkDialog(appWebUrl()+"#vincular="+b64urlEnc(JSON.stringify({v:1,s:env.salt,i:env.iv,c:env.ct})));
+  }catch(e){ cloudFail(e); }
+}
+function showLinkDialog(link){
+  const d=document.createElement("dialog");
+  d.innerHTML=`<h3>📱 Vincular otro dispositivo</h3>
+    <p class="muted" style="margin:0 0 10px">Abre este enlace en el móvil (por AirDrop o enviándotelo a ti mismo). Te pedirá la <b>misma contraseña de cifrado</b> y quedará conectado con tus datos. El enlace va cifrado: sin la contraseña no sirve de nada.</p>
+    <input class="txt" readonly value="${esc(link)}" aria-label="Enlace de vinculación" style="font-size:12px">
+    <div class="toolbar" style="margin:12px 0 0">${navigator.share?`<button class="btn primary" data-l="share">Compartir…</button>`:""}<button class="btn ${navigator.share?"":"primary"}" data-l="copy">Copiar enlace</button><button class="btn" data-l="close">Cerrar</button></div>
+    <div class="hint" data-l="msg"></div>`;
+  document.body.appendChild(d);
+  d.addEventListener("click",async e=>{
+    const a=e.target.dataset&&e.target.dataset.l, msg=d.querySelector("[data-l=msg]"); if(!a) return;
+    if(a==="close") d.close();
+    else if(a==="copy"){ try{ await navigator.clipboard.writeText(link); msg.textContent="Copiado. Con la misma cuenta de Apple puedes pegarlo directamente en el iPhone (portapapeles universal)."; }
+      catch(_){ d.querySelector("input").select(); msg.textContent="Está seleccionado: cópialo con Cmd+C."; } }
+    else if(a==="share"){ try{ await navigator.share({title:"Vincular Economía del Hogar",url:link}); }catch(_){} }
+  });
+  d.addEventListener("close",()=>d.remove());
+  d.showModal(); d.querySelector("input").select();
+}
+async function cloudFromLink(){   // la app se abre con #vincular=…
+  const m=location.hash.match(/^#vincular=([A-Za-z0-9_-]+)$/); if(!m) return false;
+  history.replaceState(null,"",location.pathname+location.search);   // se quita el código de la barra de direcciones y del historial
+  if(!(window.crypto&&crypto.subtle)){ alert("Este navegador no permite cifrar en esta dirección. Abre la app desde su dirección https."); return false; }
+  let o; try{ o=JSON.parse(b64urlDec(m[1])); if(o.v!==1||!o.s||!o.i||!o.c) throw 0; }catch(_){ alert("El enlace de vinculación no es válido o está incompleto."); return false; }
+  for(let i=0;i<3;i++){
+    const pass=await askPass(i?"Contraseña incorrecta: vuelve a escribirla":"Contraseña de cifrado (la misma que en tu otro dispositivo)");
+    if(!pass) return false;
+    let c; try{ c=JSON.parse(await cloudDecrypt({v:1,salt:o.s,iv:o.i,ct:o.c,iter:PBKDF2_ITER},pass,LINK_AAD)); }
+    catch(e){ if(e.code==="pass") continue; alert(e.message); return false; }
+    const remember=confirm("¿Recordar la contraseña en este dispositivo?\n\nAceptar = no la vuelve a pedir.\nCancelar = la pedirá cada vez que abras la app.");
+    await cloudConnectWith({repo:c.repo,token:c.token,pass,pass2:pass,remember});
+    return true;
+  }
+  alert("Contraseña incorrecta tres veces. Vuelve a abrir el enlace para intentarlo de nuevo."); return false;
+}
+function welcomeHtml(){   // solo si este dispositivo está vacío y sin conectar
+  if(hasLocalData()||cloud.cfg) return "";
+  return `<div class="card flash"><h2>👋 Esta app está vacía en este dispositivo</h2>
+    <p class="muted" style="margin:0 0 10px">Tus datos no están en la web: viven en cada dispositivo y, si lo activas, en tu nube cifrada.</p>
+    <ul class="muted" style="margin:0 0 12px;padding-left:18px;line-height:1.6">
+      <li><b>Si ya la usas en otro dispositivo</b> (por ejemplo, en tu Mac): allí ve a <i>Ajustes → Sincronización en la nube → Vincular otro dispositivo</i> y abre aquí el enlace.</li>
+      <li><b>Si empiezas de cero</b>: rellena ingresos y partidas, o mira los datos de ejemplo para probar.</li></ul>
+    <div class="toolbar"><button class="btn primary" data-a="goto-ajustes">Ir a la sincronización</button><button class="btn" data-a="demo">Ver datos de ejemplo</button></div></div>`;
+}
 async function initCloud(){
+  if(await cloudFromLink()) return;   // abierta con un enlace de vinculación
   cloud.cfg=cloudLoadCfg(); if(!cloud.cfg){ setCloud("off"); return; }
   if(!(window.crypto&&crypto.subtle)){ setCloud("error",cloudErr("nocrypto","Este navegador no permite cifrar aquí (hace falta una dirección https).")); return; }
   cloud.on=true; setStatus(srv.state); await cloudPull();
@@ -1666,18 +1734,18 @@ async function initCloud(){
 function cloudCardHtml(){
   const help=`<details class="help"><summary>Cómo configurarlo (una sola vez)</summary><ol style="margin:8px 0 0;padding-left:18px;line-height:1.6">
     <li>En GitHub crea un repositorio <b>privado</b> vacío para los datos, por ejemplo <b>economia-hogar-datos</b>.</li>
-    <li>GitHub → Settings → Developer settings → <b>Fine-grained tokens</b> → <i>Generate new token</i>. En «Repository access» elige <b>Only select repositories</b> y marca solo el repositorio de datos. En Permissions → Repository permissions pon <b>Contents: Read and write</b>. Elige una caducidad.</li>
+    <li><a href="${TOKEN_URL}" target="_blank" rel="noopener"><b>Crea el token en GitHub</b></a>: se abre ya configurado (permiso <i>Contents: Read and write</i> y 1 año). Solo tienes que elegir, en «Repository access», <b>Only select repositories</b> → el repositorio de datos, y pulsar <i>Generate token</i>. Copia el token.</li>
     <li>Pega aquí el repositorio y el token, y elige una <b>contraseña de cifrado</b>. <b>No se puede recuperar</b>: guárdala bien.</li>
     <li>En el móvil (y en cualquier otro dispositivo) repite el paso 3 con el mismo repositorio, token y contraseña.</li></ol></details>`;
   const intro=`<p class="muted">Guarda una copia <b>cifrada</b> de tus datos en un repositorio privado de GitHub para usar la app desde el móvil con el ordenador apagado. Los datos se cifran en el dispositivo con tu contraseña antes de salir: GitHub solo ve texto ilegible.</p>`;
-  if(cloud.cfg) return `<div class="card"><h2>☁ Sincronización en la nube</h2>${intro}
+  if(cloud.cfg) return `<div class="card" id="cloudcard"><h2>☁ Sincronización en la nube</h2>${intro}
     <div id="cloudline" style="margin:8px 0">${cloudLineHtml()}</div>
-    <div class="toolbar"><button class="btn primary" data-a="cloudsync">Sincronizar ahora</button><button class="btn danger" data-a="clouddisconnect">Desconectar este dispositivo</button></div>
+    <div class="toolbar"><button class="btn primary" data-a="cloudlink">📱 Vincular otro dispositivo</button><button class="btn" data-a="cloudsync">Sincronizar ahora</button><button class="btn danger" data-a="clouddisconnect">Desconectar este dispositivo</button></div>
     <div class="hint">El token se guarda solo en este navegador${cloud.cfg.pass?", y la contraseña también (la marcaste como «recordar»)":"; la contraseña se te pedirá al abrir la app"}.</div>${help}</div>`;
-  return `<div class="card"><h2>☁ Sincronización en la nube</h2>${intro}
+  return `<div class="card" id="cloudcard"><h2>☁ Sincronización en la nube</h2>${intro}
     <div class="cloudform">
       <label class="f">Repositorio de datos (privado)<input class="txt" id="cloudrepo" placeholder="usuario/economia-hogar-datos" autocomplete="off" autocapitalize="off"></label>
-      <label class="f">Token de GitHub<input class="txt" id="cloudtoken" type="password" placeholder="github_pat_…" autocomplete="off"></label>
+      <label class="f">Token de GitHub · <a href="${TOKEN_URL}" target="_blank" rel="noopener">crear uno ↗</a><input class="txt" id="cloudtoken" type="password" placeholder="github_pat_…" autocomplete="off"></label>
       <label class="f">Contraseña de cifrado (mín. 8)<input class="txt" id="cloudpass" type="password" autocomplete="new-password"></label>
       <label class="f">Repetir contraseña (solo la primera vez)<input class="txt" id="cloudpass2" type="password" autocomplete="new-password"></label>
     </div>
