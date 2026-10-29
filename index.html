@@ -57,7 +57,12 @@ header::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--
 nav{display:flex;gap:4px;max-width:100%;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 nav::-webkit-scrollbar{display:none}
 nav svg{display:none}
-nav .sh{display:none}
+.sh{display:none}   /* textos cortos (.sh) que sustituyen a los largos (.lg) en el móvil */
+.mpick{display:inline-flex;align-items:center;background:var(--fill);border-radius:10px}
+.mpick>*{background-color:transparent!important}
+.mpick select{padding-left:8px;padding-right:26px;background-position:calc(100% - 13px) 52%,calc(100% - 8px) 52%}
+.mpick .btn{padding:8px 12px}
+.brk{display:none}
 nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-radius:999px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap;flex:0 0 auto}
 .ltitle{display:none}
 @media(max-width:720px){   /* iPhone: barra de pestañas flotante abajo y título grande arriba, como las apps de iOS */
@@ -78,7 +83,14 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   nav button{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;min-height:50px;font-size:10px;font-weight:600;color:var(--muted)}
   nav svg{display:block;width:24px;height:24px}
   #nav button.on{background:var(--fill);color:var(--accent)}
-  nav .lg{display:none} nav .sh{display:inline}
+  .lg{display:none} .sh{display:inline}
+  /* barra del mes compacta: [‹ Octubre 2026 ›] [Hoy] y debajo el resto, con controles más bajos */
+  .toolbar{gap:8px;margin-bottom:12px}
+  .toolbar .brk{display:block;flex-basis:100%;height:0}
+  .toolbar .mpick{flex:1 1 auto;justify-content:space-between}
+  .toolbar button.btn,.toolbar select{min-height:36px;padding-top:5px;padding-bottom:5px;font-size:15px}
+  .toolbar select{font-size:16px!important}
+  .toolbar .seg button{min-height:32px;padding:4px 12px}
   main{padding-bottom:calc(env(safe-area-inset-bottom) + 96px)!important}
   /* «Datos del mes» en móvil: sin columna «Dif.» y con campos más compactos para que se lean los importes enteros */
   .dt th:nth-child(4),.dt td:nth-child(4){display:none}
@@ -541,11 +553,12 @@ function monthBar(extra=""){
   const [yy,mm]=ui.month.split("-").map(Number), cy=new Date().getFullYear();
   const mo=Array.from({length:12},(_,i)=>{ const n=monthLabel(`2000-${String(i+1).padStart(2,"0")}`); return `<option value="${i+1}" ${i+1===mm?"selected":""}>${n[0].toUpperCase()+n.split(" ")[0].slice(1)}</option>`; }).join("");
   let ys=""; for(let y=Math.min(yy,cy-6);y<=Math.max(yy,cy+3);y++) ys+=`<option ${y===yy?"selected":""}>${y}</option>`;
+  // mes y año en una sola cápsula; en el móvil, el resto de controles pasa a una segunda fila (.brk)
   return `<div class="toolbar">
-    <button class="btn icon" data-a="prev" aria-label="Mes anterior">‹</button>
+    <span class="mpick"><button class="btn icon" data-a="prev" aria-label="Mes anterior">‹</button>
     <select id="msel" aria-label="Mes">${mo}</select><select id="ysel" aria-label="Año">${ys}</select>
-    <button class="btn icon" data-a="next" aria-label="Mes siguiente">›</button>
-    <button class="btn" data-a="today">Hoy</button>${extra}</div>`;
+    <button class="btn icon" data-a="next" aria-label="Mes siguiente">›</button></span>
+    <button class="btn" data-a="today">Hoy</button>${extra?`<span class="brk"></span>${extra}`:""}</div>`;
 }
 function pageDatos(){
   const m=getM(ui.month);
@@ -581,7 +594,7 @@ function pageDatos(){
       <td class="n"><input${rr} inputmode="decimal" data-k="real" data-id="${c.id}" value="${showNum(spent(m,c))}" placeholder="0,00 €" aria-label="${c.annual?"Pagado":"Real"} ${esc(c.name)}"></td>
       <td class="d" id="df-${c.id}"></td></tr>`;})||`<tr><td colspan="4" class="muted">Sin partidas (añádelas en Ajustes)</td></tr>`}
     </tbody></table></div>`;}).join("");
-  return `${monthBar(`<button class="btn" data-a="copyprev" title="Copia los ingresos y los gastos fijos; los variables y los saldos se dejan vacíos">Copiar mes anterior</button><span class="seg" role="group" aria-label="Ordenar las partidas"><button class="${ui.sortMode==="group"?"":"on"}" data-a="sortmode" data-v="day">Orden: día de cobro</button><button class="${ui.sortMode==="group"?"on":""}" data-a="sortmode" data-v="group">Orden: categoría</button></span>`)}
+  return `${monthBar(`<button class="btn" data-a="copyprev" title="Copia los ingresos y los gastos fijos; los variables y los saldos se dejan vacíos"><span class="lg">Copiar mes anterior</span><span class="sh">Copiar anterior</span></button><span class="seg" role="group" aria-label="Ordenar las partidas"><button class="${ui.sortMode==="group"?"":"on"}" data-a="sortmode" data-v="day"><span class="lg">Orden: día de cobro</span><span class="sh">Por día</span></button><button class="${ui.sortMode==="group"?"on":""}" data-a="sortmode" data-v="group"><span class="lg">Orden: categoría</span><span class="sh">Por categoría</span></button></span>`)}
   ${welcomeHtml()}
   <div class="grid"><div>
     <div class="card"><h2>Ingresos</h2>
@@ -906,8 +919,8 @@ function pagePanel(){
   const bud=ui.panelMode==="budget";
   // los meses sin datos propios (solo ingresos heredados) no deben dibujar barras de ingresos
   const keys=series(ui.month,ui.range), T=keys.map(k=>chartTot(k)), t=viewTot(ui.month), RT=totals(ui.month);
-  const mode=`<span class="seg" role="group" aria-label="Qué mostrar"><button class="${bud?"":"on"}" data-a="panelmode" data-v="real">Gastos reales</button><button class="${bud?"on":""}" data-a="panelmode" data-v="budget">Presupuestado</button></span>`;
-  const head=monthBar(mode+`<select id="range" aria-label="Periodo de tendencia">${[3,6,12,24].map(n=>`<option value="${n}" ${n===ui.range?"selected":""}>Tendencia: ${n} meses</option>`).join("")}</select>`);
+  const mode=`<span class="seg" role="group" aria-label="Qué mostrar"><button class="${bud?"":"on"}" data-a="panelmode" data-v="real"><span class="lg">Gastos reales</span><span class="sh">Real</span></button><button class="${bud?"on":""}" data-a="panelmode" data-v="budget">Presupuesto</button></span>`;
+  const head=monthBar(mode+`<select id="range" aria-label="Periodo de tendencia">${[3,6,12,24].map(n=>`<option value="${n}" ${n===ui.range?"selected":""}>Últimos ${n} meses</option>`).join("")}</select>`);
   if(!T.some(x=>x.has)) return head+`<div class="card empty"><h2>${bud?"No hay presupuesto en este periodo":"Aún no hay datos en este periodo"}</h2>
     <p>${bud?"Indica tus ingresos en «Datos del mes» y el presupuesto de cada partida en «Ajustes».":"Introduce los datos del mes en «Datos del mes», o carga unos datos de ejemplo para ver cómo queda el panel."}</p>
     <button class="btn primary" data-a="goto-datos">Introducir datos</button> <button class="btn" data-a="demo">Cargar datos de ejemplo</button></div>`;
