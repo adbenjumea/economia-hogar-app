@@ -191,10 +191,31 @@ tr.famrow td:not(:first-child){text-align:right;font-weight:600;font-variant-num
 .cathead{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .cmain{flex:1 1 0;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}   /* nombre + etiquetas: las etiquetas bajan a otra línea si no caben */
 @media(max-width:720px){   /* móvil: arriba nombre y etiquetas; debajo, importe y Opciones */
-  .cathead{flex-wrap:wrap}.cathead .grip{display:none}
-  .cmain{flex:1 1 calc(100% - 44px)}.catname{flex:1 1 100%}
-  .amt{margin-left:34px}.amt small{display:none}.amt input{width:112px}
+  /* fila tipo lista de iOS: nº | nombre y etiquetas | importe arriba y «Opciones» debajo */
+  .cathead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"no main amt" "no main opt";gap:2px 8px;padding:8px 10px 6px}
+  .cathead .rowno{width:20px;height:20px;font-size:10.5px}
+  .cathead .grip{display:none}
+  .cathead .rowno{grid-area:no}
+  .cathead .cmain{grid-area:main;display:block}
+  .cathead .catname{padding:2px 0!important;min-height:0;width:100%}
+  .cathead .chips{margin-top:3px;gap:4px}
+  .cathead .chip{font-size:11px;padding:3px 6px}
+  .cathead .amt{grid-area:amt}.cathead .amt small{display:none}.cathead .amt input{width:96px;padding:5px 8px}
+  .cathead [data-a=togglecat]{grid-area:opt;justify-self:end;min-height:0!important;padding:2px 2px 0;font-size:13px}
+  .famlist .catitem{margin-bottom:6px}
+  .famhead{margin:16px 0 6px;padding:8px 10px;gap:6px 8px}
+  .famhead .famname{flex:1 1 0;min-width:0;font-size:16px}
+  .famact{width:100%;flex-wrap:nowrap;gap:6px}
+  .famact .btn{min-height:32px!important;padding:4px 10px;font-size:14px}
+  .card.msum{display:block}
 }
+.msum{display:none;padding:14px 16px}
+.msum .mrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.msum .l{font-size:12px;color:var(--muted)}
+.msum .v{font-family:ui-rounded,-apple-system,sans-serif;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.msum .s{font-size:12px;color:var(--muted)}
+.msum .track{margin:10px 0 8px}
+.msum .linkbtn{margin:0;text-decoration:none;font-size:14px}
 .catname{flex:0 1 250px;min-width:140px;font-weight:600;font-size:15px;background:transparent!important;border-color:transparent!important}
 .catname:hover,.catname:focus{background:var(--bg)!important;border-color:var(--line)!important}
 .chips{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
@@ -596,6 +617,7 @@ function pageDatos(){
     </tbody></table></div>`;}).join("");
   return `${monthBar(`<button class="btn" data-a="copyprev" title="Copia los ingresos y los gastos fijos; los variables y los saldos se dejan vacíos"><span class="lg">Copiar mes anterior</span><span class="sh">Copiar anterior</span></button><span class="seg" role="group" aria-label="Ordenar las partidas"><button class="${ui.sortMode==="group"?"":"on"}" data-a="sortmode" data-v="day"><span class="lg">Orden: día de cobro</span><span class="sh">Por día</span></button><button class="${ui.sortMode==="group"?"on":""}" data-a="sortmode" data-v="group"><span class="lg">Orden: categoría</span><span class="sh">Por categoría</span></button></span>`)}
   ${welcomeHtml()}
+  <div class="card msum" id="msum"></div>
   <div class="grid"><div>
     <div class="card"><h2>Ingresos</h2>
       <table><tbody>${inc||`<tr><td class="muted" colspan="3">Añade nóminas, pensiones, ayudas, alquileres, ingresos extra…</td></tr>`}</tbody></table>
@@ -657,6 +679,18 @@ function updateSummary(){
     ${R("Patrimonio neto",null,t.net,{bold:true})}
     </tbody></table>
     <div class="hint"><b>Presupuestado</b>: lo previsto (ingresos − gastos presupuestados). <b>Real</b>: lo registrado hasta ahora. Desviación positiva = gastas menos de lo previsto. Los cambios se guardan automáticamente ${srv.on?"en datos.json":"en este navegador"}.</div>`;
+  // resumen breve (solo se ve en el móvil, arriba del todo): lo esencial de un vistazo
+  const ms=document.getElementById("msum");
+  if(ms){
+    const pct=t.bexp>0?Math.min(100,t.expenses/t.bexp*100):0, over=t.expenses>t.bexp;
+    ms.innerHTML=`<div class="mrow">
+        <div><div class="l">Ingresos</div><div class="v">${eur(t.income,0)}</div></div>
+        <div><div class="l">Gastado</div><div class="v ${over?"neg":""}">${eur(t.expenses,0)}</div><div class="s">de ${eur(t.bexp,0)}</div></div>
+        <div><div class="l">${hasReal?"Ahorro":"Ahorro previsto"}</div><div class="v ${cls(hasReal?t.saving:t.bsaving)}">${eur(hasReal?t.saving:t.bsaving,0)}</div></div>
+      </div>
+      <div class="track"><div class="fill" style="width:${pct}%;background:${over?"var(--bad)":"var(--accent)"}"></div></div>
+      <button class="linkbtn" data-a="gosum">Ver resumen completo ↓</button>`;
+  }
   for(const c of S.cats){
     const d=document.getElementById("df-"+c.id); if(!d) continue;
     const sp=spent(m,c), diff=budgetOf(m,c)-sp, has=!c.annual&&(sp>0||budgetOf(m,c)>0);   // en anuales la diferencia no tiene sentido (se ve en «Anual»)
@@ -1253,8 +1287,8 @@ function famHeader(f,n){
     <span class="famact">
       <button class="btn sm" data-a="famup" data-id="${f.id}" ${i===0?"disabled":""} aria-label="Subir categoría">▲</button>
       <button class="btn sm" data-a="famdown" data-id="${f.id}" ${i===S.families.length-1?"disabled":""} aria-label="Bajar categoría">▼</button>
-      <button class="btn sm" data-a="addincat" data-id="${f.id}">＋ Partida aquí</button>
-      <button class="btn sm danger" data-a="delfam" data-id="${f.id}">Eliminar categoría</button>
+      <button class="btn sm" data-a="addincat" data-id="${f.id}"><span class="lg">＋ Partida aquí</span><span class="sh">＋ Partida</span></button>
+      <button class="btn sm danger" data-a="delfam" data-id="${f.id}"><span class="lg">Eliminar categoría</span><span class="sh">Eliminar</span></button>
     </span></div>`;
 }
 function catListHtml(){
@@ -1481,6 +1515,7 @@ document.addEventListener("click",e=>{
   else if(a==="cloudconnect") cloudConnect();
   else if(a==="cloudsync") cloudSyncNow();
   else if(a==="cloudlink") cloudMakeLink();
+  else if(a==="gosum"){ const s=document.getElementById("summary"); if(s) s.scrollIntoView({behavior:"smooth",block:"start"}); }
   else if(a==="goto-ajustes"){ go("ajustes"); const c=document.getElementById("cloudcard"); if(c) c.scrollIntoView({block:"start"}); }
   else if(a==="clouddisconnect") cloudDisconnect();
   else if(a==="panelmode"){ ui.panelMode=b.dataset.v==="budget"?"budget":"real"; render(); }
