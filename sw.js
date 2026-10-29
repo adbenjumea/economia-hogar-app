@@ -10,7 +10,8 @@ self.addEventListener("fetch", e => {
   const r = e.request;
   if (r.method !== "GET" || new URL(r.url).origin !== self.location.origin) return;
   e.respondWith(
-    fetch(r)
+    // «no-cache»: siempre se pregunta al servidor si hay versión nueva (GitHub Pages pide guardar 10 minutos)
+    fetch(r.url, { cache: "no-cache", credentials: "same-origin" })
       .then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(r, copy)); } return res; })
       .catch(() => caches.match(r).then(m => m || caches.match("./")))
   );

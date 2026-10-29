@@ -1939,7 +1939,25 @@ save();   // persiste la migración de ids, si la hubo
 render();
 setStatus("local");
 initServer().finally(initCloud);   // primero el servidor local (si lo hay) y después la nube
-if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});   // para abrir la app sin conexión
+if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{});   // para abrir la app sin conexión
+
+/* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
+   si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
+const appVer={cur:null,checked:0};
+async function checkUpdate(){
+  if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
+  appVer.checked=Date.now();
+  try{
+    const r=await fetch("version.json",{cache:"no-store"}); if(!r.ok) return;
+    const v=(await r.json()).v; if(!v) return;
+    if(appVer.cur===null){ appVer.cur=v; return; }
+    if(v!==appVer.cur&&!document.querySelector("dialog[open]")&&!cloud.busy){
+      cloudFlush(); setTimeout(()=>location.reload(),cloud.dirty?1500:0);
+    }
+  }catch(_){}
+}
+checkUpdate();
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checkUpdate(); });
 </script>
 </body>
 </html>
