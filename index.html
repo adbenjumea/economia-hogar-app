@@ -129,15 +129,28 @@ nav button.on{color:var(--ink)}
 nav button{position:relative;z-index:1;transition:color .25s,transform .35s var(--spring)}
 nav button:active{transform:scale(.92)}
 /* la «lente» que marca la pestaña activa y se desliza entre pestañas */
-.navpill{position:absolute;z-index:0;top:0;left:0;height:0;border-radius:999px;pointer-events:none;background:var(--fill);
-  transition:transform .45s cubic-bezier(.3,1.1,.5,1),width .45s cubic-bezier(.3,1.1,.5,1),scale .4s var(--spring),box-shadow .3s}
-/* arrastrando: la lente crece y se estira con la velocidad, como una gota de agua */
-.navpill.noanim{transition:scale .12s linear,box-shadow .3s}
-.navpill.drag{box-shadow:var(--g-edge),0 8px 22px rgba(0,0,0,.2)!important}
-nav button.peek{color:var(--accent)!important}
+.navpill{position:absolute;z-index:0;top:0;left:0;height:0;border-radius:999px;pointer-events:none;background:var(--fill);overflow:hidden;
+  transition:transform .45s cubic-bezier(.3,1.1,.5,1),width .45s cubic-bezier(.3,1.1,.5,1),scale .4s var(--spring),box-shadow .3s,background-color .25s}
+.navpill.noanim{transition:scale .12s linear,box-shadow .3s,background-color .25s}
+/* Gota de agua: al pulsarla se levanta y crece; dentro lleva una copia AMPLIADA de los iconos (como si refractara la barra),
+   con borde de luz y un leve toque de dispersión de color. Se estira con la velocidad y se asienta con rebote. */
+.lens-in{position:absolute;left:0;top:0;display:flex;justify-content:space-around;padding:6px;box-sizing:border-box;transform-origin:0 0;opacity:0;pointer-events:none;
+  background:color-mix(in srgb,var(--card) 90%,transparent);transition:transform .45s cubic-bezier(.3,1.1,.5,1),opacity .18s}
+.lens-in button{color:var(--accent)!important;transition:none!important;transform:none!important;pointer-events:none}
+.navpill.noanim .lens-in{transition:opacity .18s}
+.navpill.lift .lens-in{opacity:1}
+.navpill::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .25s;
+  background:linear-gradient(155deg,rgba(255,255,255,.6),rgba(255,255,255,0) 38%,rgba(255,255,255,0) 68%,rgba(255,255,255,.28))}
+.navpill.lift::after{opacity:1}
+.navpill.lift{z-index:2;box-shadow:inset 0 0 0 1px rgba(255,255,255,.7),inset 0 2px 3px rgba(255,255,255,.9),inset 0 -4px 8px rgba(255,255,255,.3),
+  inset 2px 0 2px -1px rgba(255,70,90,.4),inset -2px 0 2px -1px rgba(60,130,255,.4),0 12px 30px rgba(0,0,0,.24),0 2px 6px rgba(0,0,0,.12)!important}
+.navpill.settle{animation:wobble .65s var(--spring)}
+@keyframes wobble{0%{scale:1.14 1.2}28%{scale:.94 1.1}58%{scale:1.04 .97}100%{scale:1 1}}
+#nav.dragging button.on{color:var(--muted)}
+nav.lift{transform:scale(1.03)}
 .navpill.noanim{transition:none}
 @media(max-width:720px){.navpill{background:var(--g-lens);box-shadow:var(--g-edge),0 2px 8px rgba(0,0,0,.08)}
-  nav{touch-action:none;-webkit-user-select:none;user-select:none}}
+  nav{touch-action:none;-webkit-user-select:none;user-select:none;transition:transform .45s var(--spring)}}
 /* botones y controles: ceden al pulsar y vuelven con muelle */
 button.btn,.seg button,.mpick .btn{transition:transform .35s var(--spring),background-color .2s,filter .2s}
 button.btn:active,.seg button:active{transform:scale(.95);opacity:1}
@@ -608,43 +621,67 @@ function go(p){
   const changed=ui.page!==p; ui.page=p; render(); window.scrollTo(0,0);
   if(changed){ const a=document.getElementById("app"); a.classList.remove("enter"); void a.offsetWidth; a.classList.add("enter"); }
 }
-function placePill(anim){   // mueve la «lente» de cristal bajo la pestaña activa
-  const nav=document.getElementById("nav"), pill=nav&&nav.querySelector(".navpill"), b=nav&&nav.querySelector("button.on"); if(!pill||!b) return;
-  pill.classList.toggle("noanim",!anim);
-  const to=`translate(${b.offsetLeft}px,${b.offsetTop}px)`;
-  if(anim&&pill.style.transform&&pill.style.transform!==to){   // al cambiar de pestaña la lente se aplasta y se estira un instante
-    pill.style.scale="1.16 .9"; clearTimeout(placePill.t); placePill.t=setTimeout(()=>{ pill.style.scale=""; },170);
-  }
-  pill.style.width=b.offsetWidth+"px"; pill.style.height=b.offsetHeight+"px";
-  pill.style.transform=to;
+const LENS_M=1.12, LIFT_S="1.14 1.2";   // ampliación dentro de la gota y tamaño de la gota levantada
+let pg=null;   // geometría de la gota en reposo/arrastre: {x,y,w,h}
+const navEl=()=>document.getElementById("nav");
+const navTabs=()=>[...navEl().children].filter(k=>k.tagName==="BUTTON");
+function buildLens(){   // copia de los iconos que vive dentro de la gota
+  const pill=navEl().querySelector(".navpill"); if(!pill||pill.querySelector(".lens-in")) return;
+  const box=document.createElement("div"); box.className="lens-in"; box.setAttribute("aria-hidden","true");
+  navTabs().forEach(k=>{ const c=k.cloneNode(true); c.removeAttribute("data-p"); c.classList.remove("on"); c.removeAttribute("aria-current"); c.tabIndex=-1; box.appendChild(c); });
+  pill.appendChild(box);
 }
-/* Arrastrar la lente por la barra de pestañas (iPhone): sigue al dedo, se estira con la velocidad y al soltar
-   se asienta con muelle en la pestaña más cercana. */
+function lensFit(x,y,w,h,m){   // coloca la copia ampliada para que, vista a través de la gota, coincida con la barra real
+  const nav=navEl(), box=nav.querySelector(".lens-in"); if(!box) return;
+  box.style.width=nav.clientWidth+"px"; box.style.height=nav.clientHeight+"px";
+  box.style.transform=`translate(${w/2-m*(x+w/2)}px,${h/2-m*(y+h/2)}px) scale(${m})`;
+}
+function liftPill(on){   // levantar (al pulsar o viajar) o soltar con rebote
+  const nav=navEl(), pill=nav.querySelector(".navpill"); if(!pill||!pg) return;
+  nav.classList.toggle("lift",on); pill.classList.toggle("lift",on);
+  pill.style.scale=on?LIFT_S:""; lensFit(pg.x,pg.y,pg.w,pg.h,on?LENS_M:1);
+  if(!on){ pill.classList.remove("settle"); void pill.offsetWidth; pill.classList.add("settle"); }
+}
+function placePill(anim){   // mueve la gota bajo la pestaña activa
+  const nav=navEl(), pill=nav&&nav.querySelector(".navpill"), b=nav&&nav.querySelector(":scope > button.on"); if(!pill||!b) return;
+  buildLens();
+  const g={x:b.offsetLeft,y:b.offsetTop,w:b.offsetWidth,h:b.offsetHeight}, to=`translate(${g.x}px,${g.y}px)`;
+  const moved=anim&&pill.style.transform&&pill.style.transform!==to;
+  pill.classList.toggle("noanim",!anim);
+  pill.style.width=g.w+"px"; pill.style.height=g.h+"px"; pill.style.transform=to; pg=g;
+  nav.classList.remove("dragging");
+  lensFit(g.x,g.y,g.w,g.h,1);
+  if(moved&&matchMedia("(max-width:720px)").matches){   // viaje: la gota se levanta, cruza la barra y se asienta con rebote
+    liftPill(true); clearTimeout(placePill.t); placePill.t=setTimeout(()=>liftPill(false),380);
+  }
+}
+/* Arrastrar la gota (solo se agarra desde la pestaña activa): sigue al dedo, se estira con la velocidad,
+   y al soltar viaja a la pestaña más cercana y se asienta con rebote. */
 (function(){
-  const nav=document.getElementById("nav"); let st=null; window.navDragged=false;
-  const btns=()=>[...nav.querySelectorAll("button")], pill=()=>nav.querySelector(".navpill");
+  const nav=navEl(); let st=null; window.navDragged=false;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const nearest=(x,w)=>{ const c=x+w/2; return btns().reduce((m,b)=>Math.abs(b.offsetLeft+b.offsetWidth/2-c)<Math.abs(m.offsetLeft+m.offsetWidth/2-c)?b:m); };
+  const nearest=(x,w)=>{ const c=x+w/2; return navTabs().reduce((m,b)=>Math.abs(b.offsetLeft+b.offsetWidth/2-c)<Math.abs(m.offsetLeft+m.offsetWidth/2-c)?b:m); };
   nav.addEventListener("pointerdown",e=>{
-    if(!matchMedia("(max-width:720px)").matches||(e.pointerType==="mouse"&&e.button!==0)) return;
-    const on=nav.querySelector("button.on"); if(!on) return;
-    st={x0:e.clientX,last:e.clientX,t:e.timeStamp,v:0,left:on.offsetLeft,w:on.offsetWidth,top:on.offsetTop,drag:false,id:e.pointerId};
+    if(!matchMedia("(max-width:720px)").matches||(e.pointerType==="mouse"&&e.button!==0)||!pg) return;
+    const on=nav.querySelector(":scope > button.on"), hit=e.target.closest&&e.target.closest("button");
+    if(!on||hit!==on) return;
+    st={x0:e.clientX,last:e.clientX,t:e.timeStamp,v:0,g:{...pg},drag:false,id:e.pointerId};
+    liftPill(true);   // al mantener pulsado, la gota se levanta y crece
   });
   nav.addEventListener("pointermove",e=>{
     if(!st||e.pointerId!==st.id) return;
-    const dx=e.clientX-st.x0, p=pill();
-    if(!st.drag){ if(Math.abs(dx)<8) return; st.drag=true; try{ nav.setPointerCapture(e.pointerId); }catch(_){} p.classList.add("noanim","drag"); }
-    const b=btns(), x=clamp(st.left+dx,b[0].offsetLeft,b[b.length-1].offsetLeft+b[b.length-1].offsetWidth-st.w);
+    const dx=e.clientX-st.x0, p=nav.querySelector(".navpill");
+    if(!st.drag){ if(Math.abs(dx)<6) return; st.drag=true; try{ nav.setPointerCapture(e.pointerId); }catch(_){} p.classList.add("noanim"); nav.classList.add("dragging"); }
+    const t=navTabs(), g=st.g, x=clamp(g.x+dx,t[0].offsetLeft,t[t.length-1].offsetLeft+t[t.length-1].offsetWidth-g.w);
     st.v=st.v*.6+((e.clientX-st.last)/Math.max(1,e.timeStamp-st.t))*.4; st.last=e.clientX; st.t=e.timeStamp;
-    const s=Math.min(.1,Math.abs(st.v)*.08);   // estiramiento según la velocidad (limitado para no salirse de la barra)
-    p.style.transform=`translate(${x}px,${st.top}px)`; p.style.scale=`${1.06+s} ${1.06-s*.6}`;
-    const n=nearest(x,st.w); b.forEach(k=>k.classList.toggle("peek",k===n));
+    const s=Math.min(.2,Math.abs(st.v)*.15);   // estiramiento según la velocidad
+    p.style.transform=`translate(${x}px,${g.y}px)`; p.style.scale=`${1.14+s} ${1.2-s*.7}`;
+    lensFit(x,g.y,g.w,g.h,LENS_M); pg={...g,x};
   });
   const end=e=>{
     if(!st||e.pointerId!==st.id) return; const s=st; st=null;
-    if(!s.drag) return;
-    const p=pill(), m=/translate\(([-\d.]+)px/.exec(p.style.transform), x=m?parseFloat(m[1]):s.left, n=nearest(x,s.w);
-    btns().forEach(k=>k.classList.remove("peek")); p.classList.remove("noanim","drag"); p.style.scale="";
+    if(!s.drag){ liftPill(false); return; }
+    const m=/translate\(([-\d.]+)px/.exec(nav.querySelector(".navpill").style.transform), x=m?parseFloat(m[1]):s.g.x, n=nearest(x,s.g.w);
     window.navDragged=true; setTimeout(()=>{ window.navDragged=false; },350);
     if(e.type==="pointerup") go(n.dataset.p); else placePill(true);
   };
