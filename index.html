@@ -359,11 +359,6 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
 .dlegend b{font-weight:600;font-variant-numeric:tabular-nums}
 .dlegend .p{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
 .dlegend.grouped{display:block}
-.provbox{padding:10px 12px;border-radius:10px;background:var(--fill2)}
-.pcheck{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink);font-weight:400;cursor:pointer}
-.pcheck input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:none}
-.provbox.off{opacity:.45}
-.ptag{font-size:11px;color:var(--sav);background:color-mix(in srgb,var(--sav) 12%,transparent);padding:1px 6px;border-radius:999px;font-weight:500}
 .dlegend details{border-top:.5px solid var(--line2)}
 .dlegend summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto 38px;gap:8px;align-items:center;padding:7px 0;cursor:pointer;list-style:none}
 .dlegend summary::-webkit-details-marker{display:none}
@@ -630,7 +625,6 @@ function migrate(d){
     if(c.family&&!d.families.some(f=>f.id===c.family)) c.family=null;
   }
   d.goals.forEach(g=>g.id=safeId(g.id)); d.rules.forEach(r=>r.id=safeId(r.id));
-  for(const c of d.cats){ if(c.prov===undefined){ c.prov=false; c.provStart=0; c.provSince=null; } }
   for(const c of d.cats){ if(c.fixed===undefined) c.fixed = c.group!=="save" && FIXED_SLUGS.includes(c.role); if(!c.period) c.period=c.annual?"year":"month"; c.annual=c.period!=="month"; if(c.day===undefined) c.day=null; if(c.chargeMonth===undefined) c.chargeMonth=null; }
   if(Object.keys(map).length) for(const m of Object.values(d.months)){
     for(const f of ["real","budget"]){ const n={}; for(const [k,v] of Object.entries(m[f]||{})) n[map[k]||k]=v; m[f]=n; }
@@ -649,13 +643,6 @@ function migrate(d){
   return d;
 }
 const idOf=r=>(S.cats.find(c=>c.role===r)||{}).id;
-/* Provisión (p. ej. viajes): cada mes se aparta su presupuesto y lo que no se gasta se acumula en un fondo.
-   Fondo = saldo inicial + Σ (presupuesto − gastado) desde el mes en que se marcó como provisión hasta k. */
-function provBalance(c,k){
-  if(!c.prov) return 0; let b=c.provStart||0;
-  for(let x=c.provSince||k; x<=k; x=shiftMonth(x,1)){ const m=getM(x); b+=budgetOf(m,c)-spent(m,c); }
-  return b;
-}
 function curMonth(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
 function shiftMonth(k,n){ const [y,m]=k.split("-").map(Number); const d=new Date(y,m-1+n,1); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
 function monthLabel(k,short){ const [y,m]=k.split("-").map(Number); return new Date(y,m-1,1).toLocaleDateString("es-ES",short?{month:"short"}:{month:"long",year:"numeric"}); }
@@ -686,9 +673,7 @@ function hasTx(m,c){ return (m.tx||[]).some(t=>t.cat===c.id); }
 function spent(m,c){ return hasTx(m,c) ? sum(m.tx.filter(t=>t.cat===c.id).map(t=>t.amount||0)) : (m.real[c.id]||0); }
 /* Gasto REAL del mes = lo que se ha registrado (efectivo). Las partidas trimestrales y anuales solo cuentan cuando se paga:
    su parte mensual (1/3 o 1/12) aparece únicamente en el PRESUPUESTO, nunca como gasto real inventado. */
-// gasto real de una partida en el mes k. Las provisiones son un gasto programado: cuentan su importe completo cada mes
-// (desde que se marcaron); lo que se gasta de verdad sale de su fondo y no vuelve a contar.
-function costOf(m,c,k){ return c.prov&&c.provSince&&k>=c.provSince&&S.months[k] ? budgetOf(m,c) : spent(m,c); }
+function costOf(m,c,k){ return spent(m,c); }
 /* Día y mes de cobro */
 function dueIn(c,k){ if(!c.annual||!c.chargeMonth) return false; const mo=+k.slice(5); return c.period==="year" ? mo===c.chargeMonth : ((mo-c.chargeMonth)%3+3)%3===0; }
 function nextDue(c,from){ for(let i=0;i<12;i++){ const k=shiftMonth(from,i); if(dueIn(c,k)) return k; } return null; }
@@ -804,17 +789,15 @@ function mesParts(k){
   const saves=S.cats.filter(c=>c.group==="save").sort(byDay);
   const prov=S.cats.filter(c=>c.annual&&!dueIn(c,k)&&c.group!=="save");
   const inc=sum(incomeOf(m).map(i=>i.amount||0));
-  // las provisiones cuentan lo que se aparta (su presupuesto), no lo que se gasta: el gasto sale de su fondo
-  const committed=sum(fixed.map(c=>c.prov?budgetOf(m,c):Math.max(expectedOf(m,c),spent(m,c))))+sum(saves.map(c=>Math.max(budgetOf(m,c),spent(m,c))))
-    +sum(prov.map(c=>budgetOf(m,c)))+sum(vars.map(c=>c.prov?budgetOf(m,c):spent(m,c)));
+  const committed=sum(fixed.map(c=>Math.max(expectedOf(m,c),spent(m,c))))+sum(saves.map(c=>Math.max(budgetOf(m,c),spent(m,c))))
+    +sum(prov.map(c=>budgetOf(m,c)))+sum(vars.map(c=>spent(m,c)));
   return {m,fixed,vars,saves,prov,inc,left:inc-committed};
 }
 function pageMesSimple(){
   const k=ui.month, P=mesParts(k), {m}=P, isCur=k===curMonth(), now=new Date(), dim=daysOf(k);
   const paid=c=>spent(m,c)>0.004;
   // 1) cifra principal
-  const vnp=P.vars.filter(c=>!c.prov);   // el ritmo del mes no incluye las provisiones (se gastan a saltos)
-  const vb=sum(vnp.map(c=>budgetOf(m,c))), vs=sum(vnp.map(c=>spent(m,c)));
+  const vb=sum(P.vars.map(c=>budgetOf(m,c))), vs=sum(P.vars.map(c=>spent(m,c)));
   let pace="";
   if(isCur&&vb>0){
     const used=vs/vb*100, time=now.getDate()/dim*100, d=Math.round(used-time);
@@ -854,13 +837,6 @@ function pageMesSimple(){
   const env=P.vars.map(c=>({c,b:budgetOf(m,c),s:spent(m,c)})).filter(x=>x.b>0||x.s>0)
     .sort((a,b)=>(b.b?b.s/b.b:9)-(a.b?a.s/a.b:9));
   const envHtml=env.map(({c,b,s})=>{
-    if(c.prov){   // provisión: se muestra el fondo acumulado (incluye este mes)
-      const f=provBalance(c,k), tot=f+s, p=tot>0?Math.min(100,s/tot*100):100;
-      return `<button class="env" data-a="sadd" data-id="${c.id}">
-        <span class="env-n">${esc(c.name)} <small class="ptag">provisión</small></span>
-        <span class="env-r ${f<0?"neg":""}">${f>=0?`fondo ${eur(f,0)}`:`fondo en negativo ${eur(-f,0)}`}</span>
-        <span class="track"><span class="fill" style="width:${p}%;background:${f<0?"var(--bad)":"var(--sav)"}"></span></span></button>`;
-    }
     const r=b-s, p=b?Math.min(100,s/b*100):100, col=s>b?"var(--bad)":p>=85?"var(--warn)":"var(--accent)";
     return `<button class="env" data-a="sadd" data-id="${c.id}">
       <span class="env-n">${esc(c.name)}</span>
@@ -1008,10 +984,10 @@ function pageDatos(){
       const now=c.annual&&dueIn(c,ui.month), nd=c.annual&&c.chargeMonth?nextDue(c,ui.month):null;
       const mon=nd?monthLabel(nd,true).replace(".","").slice(0,3):"";   // tres letras («sep»); si toca este mes, sale en verde
       const day=`<span class="dday ${now?"now":""}"${now?' title="Se cobra este mes"':""}>${c.day||(mon?"–":"")}${mon?`<small>${mon}</small>`:""}</span>`;
-      const sub2=[c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} · ${eur(c.budget)}`:"",c.prov?`Provisión · fondo ${eur(provBalance(c,ui.month))}`:"",ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ");
+      const sub2=[c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} · ${eur(c.budget)}`:"",ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ");
       return `<tr><td><div class="pcell">${day}<div><span class="pname">${esc(c.name)}</span>${sub2?`<span class="psub">${esc(sub2)}</span>`:""}</div></div>${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
       <td class="n"><input${ro} inputmode="decimal" data-k="budget" data-id="${c.id}" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €" aria-label="Presupuesto ${esc(c.name)}"></td>
-      <td class="n rshow ${costOf(m,c,ui.month)>0?"":"empty"}" title="${c.prov?"Provisión: cuenta su importe completo cada mes":"Suma de los movimientos de esta partida (se apuntan en «Movimientos»)"}">${costOf(m,c,ui.month)>0?eur(costOf(m,c,ui.month)):"—"}</td>
+      <td class="n rshow ${spent(m,c)>0?"":"empty"}" title="Suma de los movimientos de esta partida (se apuntan en «Movimientos»)">${spent(m,c)>0?eur(spent(m,c)):"—"}</td>
       <td class="d" id="df-${c.id}"></td></tr>`;})||`<tr><td colspan="4" class="muted">Sin partidas (añádelas en Ajustes)</td></tr>`}
     </tbody></table></div>`;}).join("");
   return `${monthBar(`${mesToggle("detalle")}<button class="btn" data-a="copyprev" title="Copia los ingresos y los presupuestos del mes anterior; los movimientos y los saldos se dejan vacíos"><span class="lg">Copiar mes anterior</span><span class="sh">Copiar anterior</span></button><span class="seg" role="group" aria-label="Ordenar las partidas"><button class="${ui.sortMode==="group"?"":"on"}" data-a="sortmode" data-v="day"><span class="lg">Orden: día de cobro</span><span class="sh">Por día</span></button><button class="${ui.sortMode==="group"?"on":""}" data-a="sortmode" data-v="group"><span class="lg">Orden: categoría</span><span class="sh">Por categoría</span></button></span>`)}
@@ -1646,7 +1622,6 @@ function catChips(c){
   if(c.group!=="save") out.push(`<span class="chip">${c.fixed?"Fijo":"Variable"}</span>`);
   if(ui.catView==="list"&&c.family) out.push(`<span class="chip">📁 ${esc(famName(c.family))}</span>`);   // en la vista agrupada ya lo indica la cabecera
   if(c.annual) out.push(`<span class="chip acc">${c.period==="quarter"?"Trimestral":"Anual"}</span>`);
-  if(c.prov) out.push(`<span class="chip acc">Provisión · fondo ${eur(provBalance(c,curMonth()),0)}</span>`);
   const when=[c.day?`día ${c.day}`:"",c.annual&&c.chargeMonth?mshort(c.chargeMonth):""].filter(Boolean).join(" · ");
   if(when) out.push(`<span class="chip">📅 ${when}</span>`);
   return out.join("");
@@ -1676,10 +1651,6 @@ function catCard(c,i){
         <label class="f">Tipo<select class="sm" data-s="group" data-id="${c.id}">${Object.entries(GROUPS).map(([g,l])=>`<option value="${g}" ${g===c.group?"selected":""}>${l}</option>`).join("")}</select></label>
         <label class="f ${sv?"off":""}">¿Fijo o variable?<select class="sm" data-s="fixed" data-id="${c.id}" ${sv?"disabled":""}><option value="1" ${c.fixed?"selected":""}>Fijo (cada mes)</option><option value="0" ${c.fixed?"":"selected"}>Variable (cambia)</option></select></label>
         <label class="f ${sv?"off":""}">Periodicidad<select class="sm" data-s="period" data-id="${c.id}" ${sv?"disabled":""}><option value="month" ${c.period==="month"?"selected":""}>Mensual</option><option value="quarter" ${c.period==="quarter"?"selected":""}>Trimestral (÷3)</option><option value="year" ${c.period==="year"?"selected":""}>Anual (÷12)</option></select></label>
-        <div class="wide provbox ${sv||c.annual?"off":""}"><label class="pcheck"><input type="checkbox" data-s="prov" data-id="${c.id}" ${c.prov?"checked":""} ${sv||c.annual?"disabled":""}> <span><b>Provisión</b> — gasto programado: cada mes cuenta su importe completo y lo que no uses se acumula en un fondo (p. ej. viajes, regalos, coche)</span></label>
-          ${c.prov?`<span class="fhint" style="margin:6px 0 0 30px">Cuenta como gasto programado: cada mes se gasta su importe completo, uses o no el dinero. Lo que gastes de verdad sale del fondo.</span>
-          <label class="f" style="margin-top:8px;max-width:220px">Fondo inicial (lo que ya tienes apartado)<input class="num" inputmode="decimal" data-s="provStart" data-id="${c.id}" value="${showNum(c.provStart)}" placeholder="0,00 €"></label>
-          <span class="fhint">Fondo acumulado ahora: <b>${eur(provBalance(c,curMonth()))}</b> (desde ${monthLabel(c.provSince||curMonth())}).</span>`:""}</div>
         <label class="f">Día de cobro<input class="txt" inputmode="numeric" maxlength="2" data-s="day" data-id="${c.id}" value="${c.day||""}" placeholder="Sin fecha"><span class="fhint">Vacío = no se muestra fecha</span></label>
         <label class="f ${c.annual?"":"off"}">Mes de cobro<select class="sm" data-s="chargeMonth" data-id="${c.id}" ${c.annual?"":"disabled"}>${monthOptsFull(c.chargeMonth)}</select><span class="fhint">${c.period==="quarter"?"Mes del primer cobro del año; se repite cada 3 meses":c.annual?"Mes del año en que se cobra":"Solo para trimestrales y anuales"}</span></label>
       </div>
@@ -1771,8 +1742,6 @@ document.addEventListener("input",e=>{
   const f=e.target.dataset.s; if(!f) return;
   const c=S.cats.find(c=>c.id===e.target.dataset.id); if(!c) return;
   const v=e.target.value;
-  if(f==="prov"){ c.prov=e.target.checked; if(c.prov&&!c.provSince) c.provSince=curMonth(); save(); render(); return; }
-  if(f==="provStart"){ c.provStart=parseNum(v); save(); return; }
   if(f==="family"){   // cambiar de grupo (o crear uno nuevo desde el desplegable)
     if(v==="__new__"){ const nf=addFamily(); c.family=nf?nf.id:(c.family||null); } else c.family=v||null;
     save(); render();
@@ -2384,7 +2353,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="dd3a61fc733c2ee7";
+const APP_VER="4dc73132500e8d04";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
