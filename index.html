@@ -1506,18 +1506,20 @@ function chartTot(k,real){ const x=real?totals(k):viewTot(k); if(x.has) return x
 function catItems(keys,real){   // por defecto sigue el modo del Panel (real o presupuestado); «real» lo fuerza
   const bud=ui.panelMode==="budget"&&!real;
   const rows=S.cats.filter(c=>c.group!=="save").map(c=>({c,v:sum(keys.map(k=>bud?budgetOf(getM(k),c):costOf(getM(k),c,k)))})).filter(x=>x.v>0);
-  if(ui.donutBy==="group"){   // sumado por grupo (Vivienda, Seguros, Préstamos…)
-    const m=new Map(); rows.forEach(x=>{ const n=famName(x.c.family||null); m.set(n,(m.get(n)||0)+x.v); });
-    return [...m].map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v);
-  }
-  return rows.map(x=>({n:x.c.name,v:x.v})).sort((a,b)=>b.v-a.v);
+  const m=new Map(); rows.forEach(x=>{ const n=famName(x.c.family||null); m.set(n,(m.get(n)||0)+x.v); });
+  if(ui.donutBy==="group") return [...m].map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v);   // todas las categorías
+  // por partida: como mucho tantas porciones como categorías; las más pequeñas se juntan en «Resto de partidas»
+  const items=rows.map(x=>({n:x.c.name,v:x.v})).sort((a,b)=>b.v-a.v), max=Math.max(m.size,4);
+  if(items.length<=max) return items;
+  const rest=items.slice(max-1);
+  return items.slice(0,max-1).concat({n:`Resto de partidas (${rest.length})`,v:sum(rest.map(x=>x.v)),rest:true});
 }
 function donutToggle(){ return `<div class="toolbar" style="margin:0 0 10px"><span class="seg" role="group" aria-label="Agrupar los gastos por"><button class="${ui.donutBy==="group"?"":"on"}" data-a="donutby" data-v="cat">Por partida</button><button class="${ui.donutBy==="group"?"on":""}" data-a="donutby" data-v="group">Por categoría</button></span></div>`; }
 function donut(k){ return donutFrom(catItems([k]),ui.panelMode==="budget"?"Sin presupuesto este mes.":"Sin gastos registrados este mes."); }
 function donutFrom(items,emptyMsg){
   if(!items.length) return `<div class="empty">${emptyMsg}</div>`;
   // todas las partidas (o categorías), sin agrupar en «resto»: a partir del 10.º color se reparten tonos por el círculo cromático
-  const col=i=>i<PAL.length?PAL[i]:`hsl(${Math.round((i-PAL.length)*137.5+20)%360} 55% 55%)`;
+  const col=i=>items[i].rest?"var(--line2)":i<PAL.length?PAL[i]:`hsl(${Math.round((i-PAL.length)*137.5+20)%360} 55% 55%)`;   // «Resto» en gris
   const tot=sum(items.map(x=>x.v)), r=70, cx=100, cy=100, C=2*Math.PI*r; let off=0;
   let s=`<div class="donut"><svg viewBox="0 0 200 200" width="230" role="img" aria-label="Reparto de gastos"><g transform="rotate(-90 ${cx} ${cy})">`;
   items.forEach((x,i)=>{ const l=x.v/tot*C; s+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col(i)}" stroke-width="30" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}"><title>${esc(x.n)} · ${eur(x.v)} (${pct(x.v/tot*100)})</title></circle>`; off+=l; });
@@ -2322,7 +2324,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="d69b508eb88abab0";
+const APP_VER="2ba218da2da5fa2b";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
