@@ -676,6 +676,11 @@ function perN(c){ return c.annual?(c.period==="quarter"?3:c.period==="prov"?1:12
 const perLabel=c=>c.period==="prov"?"Provisión":c.period==="quarter"?"Trimestral":"Anual";
 /* Provisión (viajes, regalos, coche…): se aparta un importe cada mes, como un pago anual prorrateado, y se gasta cuando toque.
    El gasto real cuenta el mes en que se apunta (con movimientos). Fondo = inicial + Σ (apartado − gastado) desde que se activó. */
+// lo que cuesta la provisión en el mes k para el ahorro: lo apartado, más lo que se gaste por encima de su fondo (y menos lo que ese mes se recupera de un fondo en negativo)
+function provCharge(c,k){
+  const m=getM(k), b=budgetOf(m,c), s=spent(m,c), prev=provBalance(c,shiftMonth(k,-1)), now=prev+b-s;
+  return b+(Math.max(0,-now)-Math.max(0,-prev));
+}
 function provBalance(c,k){
   if(c.period!=="prov") return 0; let b=c.provStart||0;
   for(let x=c.provSince||k; x<=k; x=shiftMonth(x,1)){ const m=getM(x); b+=budgetOf(m,c)-spent(m,c); }
@@ -716,17 +721,19 @@ const sum = a => a.reduce((x,y)=>x+y,0);
 
 function totals(k){
   const m=getM(k), t={income:sum(incomeOf(m).map(i=>i.amount||0)),need:0,want:0,save:0,bneed:0,bwant:0,bsave:0,
-    fixed:0,variable:0,bfixed:0,bvariable:0,fe:0,fc:0,ve:0,vc:0,bfe:0,bfc:0,bve:0,bvc:0,direct:0,prov:0,paidAnnual:0};
+    fixed:0,variable:0,bfixed:0,bvariable:0,fe:0,fc:0,ve:0,vc:0,bfe:0,bfc:0,bve:0,bvc:0,direct:0,prov:0,paidAnnual:0,provx:0};
   for(const c of S.cats){
     const r=costOf(m,c,k), b=budgetOf(m,c);
     if(c.annual){ if(S.months[k]) t.prov+=c.budget/perN(c); t.paidAnnual+=r; } else t.direct+=r;   // prov = parte mensual reservada (informativa)
     t[c.group]+=r; t["b"+c.group]+=b;
+    // provisión: lo apartado cada mes no es ahorro aunque no se gaste (es un gasto programado); lo que se gasta de verdad sale del fondo
+    if(c.period==="prov"&&S.months[k]&&(!c.provSince||k>=c.provSince)) t.provx+=provCharge(c,k)-r;
     if(c.group!=="save"){
       const f=c.fixed?"fixed":"variable"; t[f]+=r; t["b"+f]+=b;
       const q=(c.fixed?"f":"v")+(c.group==="need"?"e":"c"); t[q]+=r; t["b"+q]+=b;   // matriz fijo/variable × esencial/capricho (real y presupuestada)
     }
   }
-  t.expenses=t.need+t.want; t.margin=t.income-t.fixed; t.saving=t.income-t.expenses; t.rate=t.income>0?t.saving/t.income*100:0;
+  t.expenses=t.need+t.want; t.margin=t.income-t.fixed; t.saving=t.income-t.expenses-t.provx; t.rate=t.income>0?t.saving/t.income*100:0;
   t.unassigned=t.saving-t.save; t.bexp=t.bneed+t.bwant;
   // lo mismo calculado con el dinero presupuestado
   t.bsaving=t.income-t.bexp; t.brate=t.income>0?t.bsaving/t.income*100:0; t.bmargin=t.income-t.bfixed; t.bunassigned=t.bsaving-t.bsave;
@@ -808,7 +815,7 @@ function mesParts(k){
   const committed=sum(fixed.map(c=>Math.max(expectedOf(m,c),spent(m,c))))+sum(saves.map(c=>Math.max(budgetOf(m,c),spent(m,c))))
     +sum(prov.map(c=>budgetOf(m,c)))+sum(vars.map(c=>spent(m,c)))
     // provisión: se cuenta lo apartado; si se gasta más de lo que había en el fondo, la parte que sobra
-    +sum(provs.map(c=>Math.max(budgetOf(m,c),spent(m,c)-provBalance(c,shiftMonth(k,-1)))));
+    +sum(provs.map(c=>provCharge(c,k)));
   return {m,fixed,vars,saves,prov,provs,inc,left:inc-committed};
 }
 function pageMesSimple(){
@@ -1070,6 +1077,7 @@ function updateSummary(){
     ${R("Total gastos",t.bexp,t.expenses,{bold:true})}
     ${R("· Esenciales",t.bneed,t.need,{sub:true})}
     ${R("· Caprichos",t.bwant,t.want,{sub:true})}
+    ${t.provx?R("Apartado en provisiones",null,t.provx,{sub:true}):""}
     ${R("Te queda tras los fijos",t.bmargin,hasReal?t.margin:null,{sub:true,sign:true})}
     ${R("Ahorro del mes",t.bsaving,hasReal?t.saving:null,{big:true,sign:true})}
     ${R("Tasa de ahorro",t.brate,hasReal?t.rate:null,{sub:true,sign:true,fmt:pc})}
@@ -2389,7 +2397,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="efc67ee19d5f03ca";
+const APP_VER="82464379242c6421";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
