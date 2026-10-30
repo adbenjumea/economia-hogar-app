@@ -453,6 +453,19 @@ td.rshow{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);p
 .sa-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:10px}
 .sa-row input{min-width:0;width:100%;display:block;-webkit-appearance:none;appearance:none;text-align:left}
 .sheet .f{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+/* calendario de cobros */
+.cday{width:70px}.cst{width:150px}
+.cdot{display:none;width:10px;height:10px;border-radius:50%;background:var(--muted);opacity:.45}
+.cdot.neg{background:var(--bad);opacity:1}.cdot.pos{background:var(--ok);opacity:1}
+.onlym{display:none}
+@media(max-width:720px){
+  .cst-txt{display:none}
+  .cdot{display:inline-block;vertical-align:middle}
+  .cday{width:56px}.cst{width:26px;text-align:center}
+  .calrow{cursor:pointer}
+  .calrow td{white-space:nowrap}.calrow td:nth-child(2){white-space:normal}
+  .onlym{display:inline}
+}
 .se-sum{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;margin-bottom:6px}
 .se-sum b{font-size:22px;font-family:ui-rounded,-apple-system,sans-serif}
 .se-list{max-height:40vh;overflow:auto}
@@ -1026,9 +1039,24 @@ function calendarHtml(k){
   return `<div class="card"><h2>Calendario de cobros <span class="muted">· ${eur(sum(items.map(amt)))} previstos</span></h2>
     <table class="mx"><tbody>${items.map(c=>{
       const done=spent(m,c)>0, late=cur&&!done&&c.day<now.getDate();
-      return `<tr><td style="width:70px"><b>Día ${c.day}</b></td><td style="text-align:left">${esc(c.name)}${c.annual?` <span class="tag">${c.period==="quarter"?"trimestral":"anual"}</span>`:""}</td>
-      <td>${eur(amt(c))}</td><td style="width:150px">${done?`<span class="pos">✓ registrado</span>`:late?`<span class="neg">sin registrar</span>`:`<span class="muted">pendiente</span>`}</td></tr>`; }).join("")}</tbody></table>
-    <div class="hint">Solo aparecen los gastos con día de cobro indicado en Ajustes. Los trimestrales y anuales, únicamente en el mes en que se cobran.</div></div>`;
+      // en el móvil el estado es un puntito (rojo = sin registrar, verde = registrado, gris = pendiente) y al tocar la fila sale el detalle
+      const st=done?["pos","✓ registrado"]:late?["neg","sin registrar"]:["muted","pendiente"];
+      return `<tr class="calrow" data-a="calinfo" data-id="${c.id}"><td class="cday"><b>Día ${c.day}</b></td><td style="text-align:left">${esc(c.name)}${c.annual?` <span class="tag">${c.period==="quarter"?"trimestral":"anual"}</span>`:""}</td>
+      <td>${eur(amt(c))}</td><td class="cst"><span class="${st[0]} cst-txt">${st[1]}</span><i class="cdot ${st[0]}" role="img" aria-label="${st[1]}"></i></td></tr>`; }).join("")}</tbody></table>
+    <div class="hint">Solo aparecen los gastos con día de cobro indicado en Ajustes. Los trimestrales y anuales, únicamente en el mes en que se cobran.<span class="onlym"> Toca una fila para ver su detalle.</span></div></div>`;
+}
+function calInfo(id){   // popup con el detalle de un cobro del calendario (solo en el móvil)
+  const c=S.cats.find(c=>c.id===id); if(!c) return;
+  const k=ui.month, m=getM(k), cur=k===curMonth(), now=new Date();
+  const sp=spent(m,c), exp=c.annual?c.budget:budgetOf(m,c), done=sp>0, late=cur&&!done&&c.day<now.getDate();
+  const msg=done?`<b class="pos">✓ Registrado</b> · ${eur(sp)}`:late?`<b class="neg">Sin registrar</b> · tenía que cobrarse el día ${c.day}`:`<b>Pendiente</b> · se cobra el día ${c.day}`;
+  sheet(`<h3>${esc(c.name)}</h3>
+    <div class="se-sum"><span>Día ${c.day}${c.annual?` · ${c.period==="quarter"?"trimestral":"anual"}`:""}</span><b>${eur(exp)}</b></div>
+    <p style="margin:6px 0 14px">${msg}</p>
+    <div class="toolbar" style="margin:0">${done?"":`<button class="btn primary" data-k="add">＋ Apuntar cobro</button>`}<button class="btn" data-k="no">Cerrar</button></div>`,d=>{
+    d.addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(!b) return;
+      d.close(); if(b.dataset.k==="add") sheetAdd(id,exp); });
+  });
 }
 function updateSummary(){
   const t=totals(ui.month), m=getM(ui.month), el=document.getElementById("summary"); if(!el) return;
@@ -1900,6 +1928,7 @@ document.addEventListener("click",e=>{
   else if(a==="mesview") setMesView(b.dataset.v);
   else if(a==="mesgo"){ setMesView("detalle"); const t=document.getElementById(b.dataset.v); if(t) t.scrollIntoView({block:"start"}); }
   else if(a==="smark") smark(id);
+  else if(a==="calinfo"){ if(matchMedia("(max-width:720px)").matches) calInfo(id); }
   else if(a==="sedit") sheetEdit(id);
   else if(a==="sadd") sheetAdd(id);
   else if(a==="sdone"){ ui.showDone=!ui.showDone; render(); }
@@ -2360,7 +2389,7 @@ let lastTap=0; document.addEventListener("touchend",e=>{ const n=Date.now(); if(
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="a750ae632be27730";
+const APP_VER="bdcc9b65d16f3fe9";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
