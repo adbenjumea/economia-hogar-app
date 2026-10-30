@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <!-- Seguridad: la página solo puede hablar con su propio origen y con la API de GitHub (nada de terceros) -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
@@ -114,7 +114,8 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   button.btn,select,input[type=month]{min-height:44px}   /* zona táctil mínima de 44 pt */
   .seg button{min-height:36px}
 }
-html{-webkit-text-size-adjust:100%;text-size-adjust:100%}   /* sin letra agrandada al girar el móvil */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@media(max-width:720px){html,body{touch-action:pan-x pan-y}}   /* sin zoom con los dedos en el móvil (sí se puede desplazar) */   /* sin letra agrandada al girar el móvil */
 nav button.on{color:var(--ink)}
 /* ---------- Liquid Glass (aproximación web) ----------
    Vidrio: fondo muy translúcido + desenfoque con saturación + borde especular (luz arriba, sombra abajo).
@@ -2350,10 +2351,14 @@ setStatus("local");
 initServer().finally(initCloud);   // primero el servidor local (si lo hay) y después la nube
 if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{});   // para abrir la app sin conexión
 
+// iOS Safari ignora «user-scalable=no»: se cancelan también los gestos de pellizco y el doble toque
+["gesturestart","gesturechange","gestureend"].forEach(t=>document.addEventListener(t,e=>{ if(matchMedia("(max-width:720px)").matches) e.preventDefault(); },{passive:false}));
+let lastTap=0; document.addEventListener("touchend",e=>{ const n=Date.now(); if(n-lastTap<350&&matchMedia("(max-width:720px)").matches&&!(e.target.closest&&e.target.closest("input,textarea,select"))) e.preventDefault(); lastTap=n; },{passive:false});
+
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="4dc73132500e8d04";
+const APP_VER="678a4e3517c6d4d2";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
