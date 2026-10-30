@@ -686,7 +686,9 @@ function hasTx(m,c){ return (m.tx||[]).some(t=>t.cat===c.id); }
 function spent(m,c){ return hasTx(m,c) ? sum(m.tx.filter(t=>t.cat===c.id).map(t=>t.amount||0)) : (m.real[c.id]||0); }
 /* Gasto REAL del mes = lo que se ha registrado (efectivo). Las partidas trimestrales y anuales solo cuentan cuando se paga:
    su parte mensual (1/3 o 1/12) aparece únicamente en el PRESUPUESTO, nunca como gasto real inventado. */
-function costOf(m,c,k){ return spent(m,c); }
+// gasto real de una partida en el mes k. Las provisiones son un gasto programado: cuentan su importe completo cada mes
+// (desde que se marcaron); lo que se gasta de verdad sale de su fondo y no vuelve a contar.
+function costOf(m,c,k){ return c.prov&&c.provSince&&k>=c.provSince&&S.months[k] ? budgetOf(m,c) : spent(m,c); }
 /* Día y mes de cobro */
 function dueIn(c,k){ if(!c.annual||!c.chargeMonth) return false; const mo=+k.slice(5); return c.period==="year" ? mo===c.chargeMonth : ((mo-c.chargeMonth)%3+3)%3===0; }
 function nextDue(c,from){ for(let i=0;i<12;i++){ const k=shiftMonth(from,i); if(dueIn(c,k)) return k; } return null; }
@@ -1009,7 +1011,7 @@ function pageDatos(){
       const sub2=[c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} · ${eur(c.budget)}`:"",c.prov?`Provisión · fondo ${eur(provBalance(c,ui.month))}`:"",ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ");
       return `<tr><td><div class="pcell">${day}<div><span class="pname">${esc(c.name)}</span>${sub2?`<span class="psub">${esc(sub2)}</span>`:""}</div></div>${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
       <td class="n"><input${ro} inputmode="decimal" data-k="budget" data-id="${c.id}" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €" aria-label="Presupuesto ${esc(c.name)}"></td>
-      <td class="n rshow ${spent(m,c)>0?"":"empty"}" title="Suma de los movimientos de esta partida (se apuntan en «Movimientos»)">${spent(m,c)>0?eur(spent(m,c)):"—"}</td>
+      <td class="n rshow ${costOf(m,c,ui.month)>0?"":"empty"}" title="${c.prov?"Provisión: cuenta su importe completo cada mes":"Suma de los movimientos de esta partida (se apuntan en «Movimientos»)"}">${costOf(m,c,ui.month)>0?eur(costOf(m,c,ui.month)):"—"}</td>
       <td class="d" id="df-${c.id}"></td></tr>`;})||`<tr><td colspan="4" class="muted">Sin partidas (añádelas en Ajustes)</td></tr>`}
     </tbody></table></div>`;}).join("");
   return `${monthBar(`${mesToggle("detalle")}<button class="btn" data-a="copyprev" title="Copia los ingresos y los presupuestos del mes anterior; los movimientos y los saldos se dejan vacíos"><span class="lg">Copiar mes anterior</span><span class="sh">Copiar anterior</span></button><span class="seg" role="group" aria-label="Ordenar las partidas"><button class="${ui.sortMode==="group"?"":"on"}" data-a="sortmode" data-v="day"><span class="lg">Orden: día de cobro</span><span class="sh">Por día</span></button><button class="${ui.sortMode==="group"?"on":""}" data-a="sortmode" data-v="group"><span class="lg">Orden: categoría</span><span class="sh">Por categoría</span></button></span>`)}
@@ -1674,8 +1676,9 @@ function catCard(c,i){
         <label class="f">Tipo<select class="sm" data-s="group" data-id="${c.id}">${Object.entries(GROUPS).map(([g,l])=>`<option value="${g}" ${g===c.group?"selected":""}>${l}</option>`).join("")}</select></label>
         <label class="f ${sv?"off":""}">¿Fijo o variable?<select class="sm" data-s="fixed" data-id="${c.id}" ${sv?"disabled":""}><option value="1" ${c.fixed?"selected":""}>Fijo (cada mes)</option><option value="0" ${c.fixed?"":"selected"}>Variable (cambia)</option></select></label>
         <label class="f ${sv?"off":""}">Periodicidad<select class="sm" data-s="period" data-id="${c.id}" ${sv?"disabled":""}><option value="month" ${c.period==="month"?"selected":""}>Mensual</option><option value="quarter" ${c.period==="quarter"?"selected":""}>Trimestral (÷3)</option><option value="year" ${c.period==="year"?"selected":""}>Anual (÷12)</option></select></label>
-        <div class="wide provbox ${sv||c.annual?"off":""}"><label class="pcheck"><input type="checkbox" data-s="prov" data-id="${c.id}" ${c.prov?"checked":""} ${sv||c.annual?"disabled":""}> <span><b>Provisión</b> — lo que no gastes cada mes se acumula para más adelante (p. ej. viajes, regalos, coche)</span></label>
-          ${c.prov?`<label class="f" style="margin-top:8px;max-width:220px">Fondo inicial (lo que ya tienes apartado)<input class="num" inputmode="decimal" data-s="provStart" data-id="${c.id}" value="${showNum(c.provStart)}" placeholder="0,00 €"></label>
+        <div class="wide provbox ${sv||c.annual?"off":""}"><label class="pcheck"><input type="checkbox" data-s="prov" data-id="${c.id}" ${c.prov?"checked":""} ${sv||c.annual?"disabled":""}> <span><b>Provisión</b> — gasto programado: cada mes cuenta su importe completo y lo que no uses se acumula en un fondo (p. ej. viajes, regalos, coche)</span></label>
+          ${c.prov?`<span class="fhint" style="margin:6px 0 0 30px">Cuenta como gasto programado: cada mes se gasta su importe completo, uses o no el dinero. Lo que gastes de verdad sale del fondo.</span>
+          <label class="f" style="margin-top:8px;max-width:220px">Fondo inicial (lo que ya tienes apartado)<input class="num" inputmode="decimal" data-s="provStart" data-id="${c.id}" value="${showNum(c.provStart)}" placeholder="0,00 €"></label>
           <span class="fhint">Fondo acumulado ahora: <b>${eur(provBalance(c,curMonth()))}</b> (desde ${monthLabel(c.provSince||curMonth())}).</span>`:""}</div>
         <label class="f">Día de cobro<input class="txt" inputmode="numeric" maxlength="2" data-s="day" data-id="${c.id}" value="${c.day||""}" placeholder="Sin fecha"><span class="fhint">Vacío = no se muestra fecha</span></label>
         <label class="f ${c.annual?"":"off"}">Mes de cobro<select class="sm" data-s="chargeMonth" data-id="${c.id}" ${c.annual?"":"disabled"}>${monthOptsFull(c.chargeMonth)}</select><span class="fhint">${c.period==="quarter"?"Mes del primer cobro del año; se repite cada 3 meses":c.annual?"Mes del año en que se cobra":"Solo para trimestrales y anuales"}</span></label>
@@ -2381,7 +2384,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="1b52df65c7c41e17";
+const APP_VER="dd3a61fc733c2ee7";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
