@@ -358,6 +358,19 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
 .dlegend .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dlegend b{font-weight:600;font-variant-numeric:tabular-nums}
 .dlegend .p{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.dlegend.grouped{display:block}
+.dlegend details{border-top:.5px solid var(--line2)}
+.dlegend summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto 38px;gap:8px;align-items:center;padding:7px 0;cursor:pointer;list-style:none}
+.dlegend summary::-webkit-details-marker{display:none}
+.dlegend summary .n{font-weight:600}
+.dlegend summary .n small{font-weight:400;color:var(--muted);margin-left:2px}
+.dlegend summary::after{content:"›";grid-column:5;color:var(--muted);font-size:16px;line-height:1;transition:none}
+.dlegend summary{grid-template-columns:auto minmax(0,1fr) auto 38px 10px}
+.dlegend details[open] summary::after{transform:rotate(90deg)}
+.dlegend .kid{display:grid;grid-template-columns:auto minmax(0,1fr) auto 38px 10px;gap:8px;align-items:center;padding:4px 0 4px 18px;font-size:12.5px;color:var(--muted)}
+.dlegend .kid b{font-weight:500;color:var(--ink)}
+.dlegend .kid i{width:8px;height:8px}
+.dlegend .kid:last-child{padding-bottom:8px}
 .cloudform{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 .linkbox{background:var(--soft);border-radius:12px;padding:14px;margin:12px 0}
 .cloudform .f{display:block;font-size:12px;font-weight:600;color:var(--muted)}
@@ -1507,7 +1520,10 @@ function catItems(keys,real){   // por defecto sigue el modo del Panel (real o p
   const bud=ui.panelMode==="budget"&&!real;
   const rows=S.cats.filter(c=>c.group!=="save").map(c=>({c,v:sum(keys.map(k=>bud?budgetOf(getM(k),c):costOf(getM(k),c,k)))})).filter(x=>x.v>0);
   const m=new Map(); rows.forEach(x=>{ const n=famName(x.c.family||null); m.set(n,(m.get(n)||0)+x.v); });
-  if(ui.donutBy==="group") return [...m].map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v);   // todas las categorías
+  if(ui.donutBy==="group"){   // todas las categorías, cada una con sus partidas (para el anillo exterior y la leyenda desplegable)
+    const kids=new Map(); rows.forEach(x=>{ const n=famName(x.c.family||null); if(!kids.has(n)) kids.set(n,[]); kids.get(n).push({n:x.c.name,v:x.v}); });
+    return [...m].map(([n,v])=>({n,v,kids:kids.get(n).sort((a,b)=>b.v-a.v)})).sort((a,b)=>b.v-a.v);
+  }
   // por partida: como mucho tantas porciones como categorías; las más pequeñas se juntan en «Resto de partidas»
   const items=rows.map(x=>({n:x.c.name,v:x.v})).sort((a,b)=>b.v-a.v), max=Math.max(m.size,4);
   if(items.length<=max) return items;
@@ -1520,11 +1536,22 @@ function donutFrom(items,emptyMsg){
   if(!items.length) return `<div class="empty">${emptyMsg}</div>`;
   // todas las partidas (o categorías), sin agrupar en «resto»: a partir del 10.º color se reparten tonos por el círculo cromático
   const col=i=>items[i].rest?"var(--line2)":i<PAL.length?PAL[i]:`hsl(${Math.round((i-PAL.length)*137.5+20)%360} 55% 55%)`;   // «Resto» en gris
-  const tot=sum(items.map(x=>x.v)), r=70, cx=100, cy=100, C=2*Math.PI*r; let off=0;
-  let s=`<div class="donut"><svg viewBox="0 0 200 200" width="230" role="img" aria-label="Reparto de gastos"><g transform="rotate(-90 ${cx} ${cy})">`;
-  items.forEach((x,i)=>{ const l=x.v/tot*C; s+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col(i)}" stroke-width="30" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}"><title>${esc(x.n)} · ${eur(x.v)} (${pct(x.v/tot*100)})</title></circle>`; off+=l; });
-  s+=`</g><text x="${cx}" y="${cy-2}" text-anchor="middle" style="font-size:18px;font-weight:700;fill:var(--ink)">${eur(tot)}</text><text x="${cx}" y="${cy+16}" text-anchor="middle" style="font-size:11px">gastos</text></svg>
-  <div class="dlegend">${items.map((x,i)=>`<div><i style="background:${col(i)}"></i><span class="n">${esc(x.n)}</span><b>${eur(x.v)}</b><span class="p">${pct(x.v/tot*100)}</span></div>`).join("")}</div></div>`;
+  const tot=sum(items.map(x=>x.v)), cx=100, cy=100, two=items.some(x=>x.kids);
+  // con categorías: anillo interior = categorías; exterior = sus partidas, en tonos del color de su categoría
+  const ring=(r,w,segs)=>{ const C=2*Math.PI*r; let off=0, s="";
+    segs.forEach(x=>{ const l=x.v/tot*C; s+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${x.c}" stroke-width="${w}" stroke-dasharray="${Math.max(0,l-(two?.6:0))} ${C-l+(two?.6:0)}" stroke-dashoffset="${-off}"><title>${esc(x.n)} · ${eur(x.v)} (${pct(x.v/tot*100)})</title></circle>`; off+=l; });
+    return s; };
+  const shade=(c,j,n)=>n<2?c:`color-mix(in srgb, ${c} ${Math.round(100-j*55/(n-1))}%, var(--card))`;
+  let rings;
+  if(two) rings=ring(56,26,items.map((x,i)=>({n:x.n,v:x.v,c:col(i)})))+ring(81,18,items.flatMap((x,i)=>x.kids.map((k,j)=>({n:`${k.n} (${x.n})`,v:k.v,c:shade(col(i),j,x.kids.length)}))));
+  else rings=ring(70,30,items.map((x,i)=>({n:x.n,v:x.v,c:col(i)})));
+  let s=`<div class="donut"><svg viewBox="0 0 200 200" width="${two?250:230}" role="img" aria-label="Reparto de gastos"><g transform="rotate(-90 ${cx} ${cy})">${rings}</g>
+    <text x="${cx}" y="${cy-1}" text-anchor="middle" style="font-size:${two?14:18}px;font-weight:700;fill:var(--ink)">${eur(tot,two?0:2)}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" style="font-size:10px">gastos</text></svg>`;
+  if(two){
+    s+=`<div class="dlegend grouped">${items.map((x,i)=>`<details><summary><i style="background:${col(i)}"></i><span class="n">${esc(x.n)} <small>${x.kids.length}</small></span><b>${eur(x.v)}</b><span class="p">${pct(x.v/tot*100)}</span></summary>
+      ${x.kids.map((k,j)=>`<div class="kid"><i style="background:${shade(col(i),j,x.kids.length)}"></i><span class="n">${esc(k.n)}</span><b>${eur(k.v)}</b><span class="p">${pct(k.v/x.v*100)}</span></div>`).join("")}</details>`).join("")}</div>
+      <div class="hint" style="align-self:stretch">Anillo interior: categorías. Exterior: sus partidas. Toca una categoría para ver sus partidas (el % es sobre la categoría).</div></div>`;
+  } else s+=`<div class="dlegend">${items.map((x,i)=>`<div><i style="background:${col(i)}"></i><span class="n">${esc(x.n)}</span><b>${eur(x.v)}</b><span class="p">${pct(x.v/tot*100)}</span></div>`).join("")}</div></div>`;
   return s;
 }
 function structure(t){
@@ -2324,7 +2351,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="2ba218da2da5fa2b";
+const APP_VER="d79b92da05f8b4fa";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
