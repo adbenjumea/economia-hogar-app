@@ -80,7 +80,7 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   header.scrolled .navtitle{opacity:1}
   /* en el iPhone el estado de guardado/sincronización va en la línea del título grande (.ltstat) */
   header #status,header #cloudstatus{display:none}
-  .ltitle{display:flex!important;align-items:baseline;justify-content:space-between;gap:8px}
+  .ltitle{display:flex!important;align-items:center;justify-content:space-between;gap:8px}
   .ltitle>span:first-child{white-space:nowrap}
   .ltstat{font-size:13px;font-weight:500;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;cursor:pointer}
   .bar{min-height:40px}
@@ -355,8 +355,8 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
 .cloudform .f input{margin-top:5px;font-weight:400;color:var(--ink)}
 @media(max-width:720px){main .card{padding:14px}}
 @media(max-width:370px){table.mx td,table.mx th{padding:6px 4px}}
-/* «Datos del mes» en el móvil: cada fila es una rejilla. A la derecha, una sola casilla («Cobrado»/«Real»);
-   el previsto pasa debajo del nombre, en gris y editable. Las celdas siguen en el mismo orden (Enter funciona igual). */
+/* «Datos del mes» (Detalle) en el móvil: a la derecha la casilla del previsto (es la vista para planificar);
+   lo cobrado, que sale de «Movimientos», va debajo del nombre solo si hay algo. */
 @media(max-width:720px){
   .dt{display:block}
   .dt thead,.dt tbody{display:block}
@@ -364,24 +364,24 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
   .dt thead tr{border-top:0;padding:0 0 4px}
   .dt td,.dt th{display:block;border-top:0!important;padding:0!important;width:auto!important;min-width:0!important}
   .dt tr>:nth-child(1){grid-column:1;grid-row:1}
-  .dt tr>:nth-child(2){grid-column:1;grid-row:2}
-  .dt tr>:nth-child(3){grid-column:2;grid-row:1/span 2}
-  .dt tr>:nth-child(4),.dt thead th:nth-child(2){display:none!important}
+  .dt tr>:nth-child(2){grid-column:2;grid-row:1/span 2}
+  .dt tr>:nth-child(3){grid-column:1;grid-row:2}
+  .dt tr>:nth-child(4),.dt thead th:nth-child(3){display:none!important}
   .dt td[colspan]{grid-column:1/-1}
-  .dt tbody tr:not(.famrow)>td:nth-child(2){display:flex!important;align-items:baseline;gap:5px;padding-left:34px!important;color:var(--muted);font-size:13px}
-  .dt tbody tr:not(.famrow)>td:nth-child(2)::before{content:attr(data-pre);white-space:nowrap}
-  .dt tbody tr:not(.famrow)>td:nth-child(2)::after{content:attr(data-post);white-space:nowrap}
-  .dt .psub{display:none}   /* en el móvil, ese dato va en la línea del previsto */
-  .dt tbody tr>td:nth-child(2) input.num{background:transparent!important;color:var(--muted);text-align:left;padding:0!important;width:auto;min-width:0;flex:0 1 auto;height:auto}
-  .dt tbody tr>td:nth-child(2) input.num.ro{font-size:13px!important}   /* (solo lectura: no hace falta 16 px para evitar el zoom de iOS) */
-  .dt tbody tr>td:nth-child(2) input.num:focus{background:var(--fill)!important;color:var(--ink);padding:2px 6px!important;outline:none}
-  .dt tbody tr>td:nth-child(3) input.num{padding:8px!important}
+  .dt td.rshow{padding-left:34px!important;font-size:12.5px;color:var(--muted);text-align:left}
+  .dt td.rshow::before{content:"Cobrado "}
+  .dt td.rshow.empty{display:none!important}
+  .dt tr:has(td.rshow.empty)>td:nth-child(2){grid-row:1}   /* sin cobros: nombre y casilla en la misma línea */
+  .dt tbody tr>td:nth-child(2) input.num{padding:8px!important}
   tr.famrow{background:var(--soft);border-radius:8px;padding:6px 8px!important;margin:6px 0 2px}
-  tr.famrow>td:nth-child(2){font-size:12px;font-weight:500;color:var(--muted);text-align:left!important}
-  tr.famrow>td:nth-child(3){text-align:right}
-}   /* va al final para que gane a la regla general de .card */
+  tr.famrow>td:nth-child(3){font-size:12px;font-weight:500;color:var(--muted);text-align:left!important}
+  tr.famrow>td:nth-child(2){text-align:right}
+}
+td.rshow{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);padding-right:10px!important}
+.msimple{max-width:600px;margin:0 auto}
+@media(min-width:721px){.msimple .hero-v{font-size:38px}}
 /* --- Mes: vista sencilla --- */
-.hero{text-align:center;padding:20px 18px 16px}
+.card.hero{text-align:center;padding:20px 18px 16px}
 .hero-l{font-size:14px;color:var(--muted)}
 .hero-v{font-family:ui-rounded,-apple-system,sans-serif;font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:2px 0;font-variant-numeric:tabular-nums;color:var(--ok)}
 .hero-v.neg{color:var(--bad)}
@@ -428,6 +428,11 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
 .sa-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:10px}
 .sa-row input{min-width:0;width:100%;display:block;-webkit-appearance:none;appearance:none;text-align:left}
 .sheet .f{display:block;font-size:12px;font-weight:600;color:var(--muted)}
+.se-sum{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;margin-bottom:6px}
+.se-sum b{font-size:22px;font-family:ui-rounded,-apple-system,sans-serif}
+.se-list{max-height:40vh;overflow:auto}
+.se-tx{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 0;border-top:.5px solid var(--line2);font-size:14px}
+.se-d{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sheet .f input{margin-top:5px;font-weight:400;color:var(--ink)}
 </style>
 </head>
@@ -598,6 +603,17 @@ function migrate(d){
   for(const c of d.cats){ if(c.fixed===undefined) c.fixed = c.group!=="save" && FIXED_SLUGS.includes(c.role); if(!c.period) c.period=c.annual?"year":"month"; c.annual=c.period!=="month"; if(c.day===undefined) c.day=null; if(c.chargeMonth===undefined) c.chargeMonth=null; }
   if(Object.keys(map).length) for(const m of Object.values(d.months)){
     for(const f of ["real","budget"]){ const n={}; for(const [k,v] of Object.entries(m[f]||{})) n[map[k]||k]=v; m[f]=n; }
+  }
+  // lo cobrado/gastado sale solo de «Movimientos»: los importes escritos a mano pasan a ser movimientos (sin cambiar los totales)
+  for(const [k,m] of Object.entries(d.months)){
+    for(const [cid,v] of Object.entries(m.real||{})){
+      const c=d.cats.find(c=>c.id===cid);
+      if(c&&v>0&&!m.tx.some(t=>t.cat===cid)){
+        const dd=Math.min(c.day||1,new Date(+k.slice(0,4),+k.slice(5,7),0).getDate());
+        m.tx.push({id:uid(),date:`${k}-${String(dd).padStart(2,"0")}`,desc:"Apuntado a mano",cat:cid,amount:v});
+      }
+    }
+    m.real={};
   }
   return d;
 }
@@ -778,7 +794,7 @@ function pageMesSimple(){
       <span class="dday">${c.day||"–"}${mon}</span>
       <button class="fname" data-a="sedit" data-id="${c.id}">${esc(c.name)}${c.annual?`<small>${c.period==="quarter"?"Trimestral":"Anual"}</small>`:""}${done&&Math.abs(diff)>0.004?`<small class="${diff>0?"neg":"pos"}">${diff>0?"+":"−"}${eur(Math.abs(diff))} sobre lo previsto</small>`:""}</button>
       <button class="famt" data-a="sedit" data-id="${c.id}">${eur(done?sp:exp)}</button>
-      <button class="chk ${done?"on":""}" data-a="smark" data-id="${c.id}" ${ntx?"disabled":""} aria-label="${done?"Desmarcar":"Marcar como cobrado"}">${done?"✓":""}</button></div>`;
+      <button class="chk ${done?"on":""}" data-a="smark" data-id="${c.id}" aria-label="${done?"Desmarcar":"Marcar como cobrado"}">${done?"✓":""}</button></div>`;
   };
   const pend=P.fixed.filter(c=>!paid(c)), done=P.fixed.filter(paid);
   let pendHtml="", hoyPuesto=!isCur;
@@ -813,8 +829,8 @@ function pageMesSimple(){
     ${ui.showProv?P.prov.slice().sort((a,b)=>(nextDue(a,k)||"9").localeCompare(nextDue(b,k)||"9")).map(c=>{ const n=nextDue(c,k);
       return `<div class="prow"><span>${esc(c.name)}</span><span class="muted">${n?monthLabel(n,true).replace(".","").slice(0,3)+" · ":""}${eur(c.budget)}</span></div>`; }).join("")
       +`<div class="hint">Cada mes se reserva su parte; aparecen en «Por cobrar» el mes en que se cobran.</div>`:""}</div>`:"";
-  return `${monthBar(mesToggle("simple"))}${welcomeHtml()}${closeBanner}${hero}${fixedCard}${varCard}${saveCard}${provCard}
-    <div class="fabwrap"><button class="btn primary fab" data-a="sadd" aria-label="Apuntar gasto">＋ Gasto</button></div>`;
+  return `<div class="msimple">${monthBar(mesToggle("simple"))}${welcomeHtml()}${closeBanner}${hero}${fixedCard}${varCard}${saveCard}${provCard}
+    <div class="fabwrap"><button class="btn primary fab" data-a="sadd" aria-label="Apuntar gasto">＋ Gasto</button></div></div>`;
 }
 /* --- aviso inferior con «Deshacer» --- */
 function toast(msg,undo){
@@ -825,13 +841,19 @@ function toast(msg,undo){
   if(undo) d.querySelector("button").onclick=()=>{ undo(); d.remove(); };
   setTimeout(()=>d.remove(),5000);
 }
-function smark(id){   // marcar/desmarcar un cobro con un toque (con deshacer)
+function smark(id){   // ✓ = se cobró lo previsto: se crea el movimiento (lo cobrado sale siempre de «Movimientos»)
   const c=S.cats.find(c=>c.id===id); if(!c) return;
-  const m=ensureM(ui.month), had=Object.prototype.hasOwnProperty.call(m.real,id), prev=m.real[id];
-  const wasPaid=spent(m,c)>0.004;
-  if(wasPaid) delete m.real[id]; else m.real[id]=expectedOf(m,c);
-  save(); render();
-  toast(`${c.name} ${wasPaid?"desmarcada":"marcada como cobrada"}`,()=>{ if(had) m.real[id]=prev; else delete m.real[id]; save(); render(); });
+  const k=ui.month, m=ensureM(k), mine=m.tx.filter(t=>t.cat===id);
+  if(mine.length>1){ sheetEdit(id); return; }   // varios movimientos: mejor verlos
+  if(mine.length===1){   // desmarcar = quitar su movimiento
+    const t=mine[0]; m.tx=m.tx.filter(x=>x!==t); save(); render();
+    toast(`${c.name}: quitado el cobro de ${eur(t.amount)}`,()=>{ ensureM(k).tx.push(t); save(); render(); });
+    return;
+  }
+  const dd=Math.min(c.day||new Date().getDate(),daysOf(k));
+  const t={id:uid(),date:`${k}-${String(dd).padStart(2,"0")}`,desc:c.name,cat:id,amount:expectedOf(m,c)};
+  m.tx.push(t); save(); render();
+  toast(`${c.name} cobrada · ${eur(t.amount)}`,()=>{ const mm=ensureM(k); mm.tx=mm.tx.filter(x=>x!==t); save(); render(); });
 }
 /* --- hojas (ventanas inferiores) --- */
 function sheet(html,onReady){
@@ -842,11 +864,11 @@ function topCats(n){   // partidas variables más usadas en los últimos 3 meses
   const cnt={}; for(let i=0;i<3;i++){ for(const t of (getM(shiftMonth(ui.month,-i)).tx||[])) cnt[t.cat]=(cnt[t.cat]||0)+1; }
   return S.cats.filter(c=>c.group!=="save"&&!c.annual&&!c.fixed).sort((a,b)=>(cnt[b.id]||0)-(cnt[a.id]||0)||(b.budget-a.budget)).slice(0,n);
 }
-function sheetAdd(preset){
+function sheetAdd(preset,amount){
   const k=ui.month, today=new Date().toISOString().slice(0,10), date=today.slice(0,7)===k?today:k+"-"+String(Math.min(new Date().getDate(),daysOf(k))).padStart(2,"0");
   const tops=topCats(6); if(preset&&!tops.some(c=>c.id===preset)){ const c=S.cats.find(c=>c.id===preset); if(c) tops.unshift(c); }
   sheet(`<h3>Apuntar gasto</h3>
-    <input class="num bigamt" id="sa-amt" inputmode="decimal" placeholder="0,00 €" aria-label="Importe" autocomplete="off">
+    <input class="num bigamt" id="sa-amt" inputmode="decimal" placeholder="0,00 €" aria-label="Importe" autocomplete="off" value="${amount?showNum(amount):""}">
     <div class="chips sa-chips">${tops.map(c=>`<button class="chip pick ${c.id===preset?"on":""}" data-c="${c.id}">${esc(c.name)}</button>`).join("")}</div>
     <select class="sm" id="sa-cat" aria-label="Partida">${catOptions(preset||"","Otra partida…")}</select>
     <div class="sa-row"><input class="txt" id="sa-desc" placeholder="Descripción (opcional)" aria-label="Descripción"><input class="txt" type="date" id="sa-date" value="${date}" aria-label="Fecha"></div>
@@ -862,36 +884,40 @@ function sheetAdd(preset){
       if(!cat){ alert("Elige la partida."); return; }
       if(!DATE_RE.test(dt)){ alert("La fecha no es válida."); return; }
       const c=S.cats.find(x=>x.id===cat), mk=dt.slice(0,7), m=ensureM(mk);
-      // si la partida tenía un importe escrito a mano, se conserva como un movimiento (si no, se perdería al haber movimientos)
-      let conv=null;
-      if(!hasTx(m,c)&&m.real[cat]){ conv={id:uid(),date:mk+"-01",desc:"Importe apuntado antes",cat,amount:m.real[cat]}; m.tx.push(conv); delete m.real[cat]; }
-      const tx={id:uid(),date:dt,desc,cat,amount}; m.tx.push(tx);
+      const tx={id:uid(),date:dt,desc:desc||(c?c.name:""),cat,amount}; m.tx.push(tx);
       save(); d.close(); ui.month=mk; render();
-      toast(`${eur(amount)} en ${c?c.name:"la partida"}`,()=>{ m.tx=m.tx.filter(t=>t!==tx&&t!==conv); if(conv) m.real[cat]=conv.amount; save(); render(); });
+      toast(`${eur(amount)} en ${c?c.name:"la partida"}`,()=>{ m.tx=m.tx.filter(t=>t!==tx); save(); render(); });
     });
     sel.addEventListener("change",()=>pick(sel.value));
     d.querySelector("#sa-amt").focus();
   });
 }
-function sheetEdit(id){
+function sheetEdit(id){   // hoja de una partida: sus movimientos del mes (para añadir o quitar) y su previsto
   const c=S.cats.find(c=>c.id===id); if(!c) return;
-  const m=getM(ui.month), exp=expectedOf(m,c), ntx=(m.tx||[]).filter(t=>t.cat===id).length;
+  const k=ui.month, m=getM(k), exp=expectedOf(m,c);
+  const list=(m.tx||[]).filter(t=>t.cat===id).sort((a,b)=>a.date.localeCompare(b.date));
+  const sp=sum(list.map(t=>t.amount||0));
+  const verb=c.group==="save"?"Apartado":c.fixed||c.annual?"Cobrado":"Gastado";
   sheet(`<h3>${esc(c.name)}</h3>
-    <label class="f">${c.group==="save"?"Apartado":c.fixed||c.annual?"Cobrado":"Gastado"} este mes
-      <input class="num bigamt" id="se-real" inputmode="decimal" value="${showNum(spent(m,c))}" placeholder="0,00 €" ${ntx?"readonly":""}></label>
-    ${ntx?`<div class="hint">Es la suma de ${ntx} movimiento${ntx>1?"s":""}; se cambian en «Movimientos».</div>`:`<div class="toolbar" style="margin:8px 0 0"><button class="btn sm" data-k="exp">= Previsto (${eur(exp)})</button><button class="btn sm" data-k="zero">No se cobró</button></div>`}
-    ${c.annual?`<div class="hint" style="margin-top:12px">${c.period==="quarter"?"Trimestral":"Anual"}: ${eur(c.budget)} por cobro. Se cambia en Ajustes.</div>`
-      :`<label class="f" style="margin-top:14px">Previsto este mes<input class="num" id="se-bud" inputmode="decimal" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €"></label>`}
-    <div class="toolbar" style="margin:14px 0 0"><button class="btn primary" data-k="ok">Guardar</button><button class="btn" data-k="no">Cancelar</button>${!c.fixed&&!c.annual&&c.group!=="save"?`<button class="btn" data-k="add">＋ Gasto</button>`:""}</div>`,d=>{
+    <div class="se-sum"><span>${verb} este mes</span><b>${eur(sp)}</b></div>
+    <div class="se-list">${list.length?list.map(t=>`<div class="se-tx"><span class="muted">${t.date.slice(8)}/${t.date.slice(5,7)}</span><span class="se-d">${esc(t.desc||"—")}</span><b>${eur(t.amount||0)}</b><button class="btn icon danger sm" data-k="del" data-t="${t.id}" aria-label="Quitar movimiento">✕</button></div>`).join("")
+      :`<div class="muted" style="padding:8px 0">Sin movimientos este mes.</div>`}</div>
+    <div class="toolbar" style="margin:10px 0 0"><button class="btn primary" data-k="add">＋ Añadir movimiento</button></div>
+    ${c.annual?`<div class="hint" style="margin-top:14px">${c.period==="quarter"?"Trimestral":"Anual"}: ${eur(c.budget)} por cobro (se cambia en Ajustes).</div>`
+      :`<label class="f" style="margin-top:16px">Previsto este mes<input class="num" id="se-bud" inputmode="decimal" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €"></label>`}
+    <div class="toolbar" style="margin:14px 0 0">${c.annual?"":`<button class="btn" data-k="ok">Guardar previsto</button>`}<button class="btn" data-k="no">Cerrar</button></div>`,d=>{
     d.addEventListener("click",e=>{
-      const b=e.target.closest("[data-k]"); if(!b) return; const k=b.dataset.k, r=d.querySelector("#se-real");
-      if(k==="exp"){ r.value=showNum(exp); return; }
-      if(k==="zero"){ r.value=""; return; }
-      if(k==="no"){ d.close(); return; }
-      if(k==="add"){ d.close(); sheetAdd(id); return; }
+      const b=e.target.closest("[data-k]"); if(!b) return; const a=b.dataset.k;
+      if(a==="no"){ d.close(); return; }
+      if(a==="add"){ d.close(); sheetAdd(id,c.fixed||c.annual||c.group==="save"?Math.max(0,exp-sp):0); return; }
+      if(a==="del"){
+        const mm=ensureM(k), t=mm.tx.find(x=>x.id===b.dataset.t); if(!t) return;
+        mm.tx=mm.tx.filter(x=>x!==t); save(); d.close(); render();
+        toast(`Quitado ${eur(t.amount)} de ${c.name}`,()=>{ ensureM(k).tx.push(t); save(); render(); });
+        return;
+      }
       const bud=d.querySelector("#se-bud");
       if(bud&&Math.abs(parseNum(bud.value)-budgetOf(m,c))>0.004) onInput({target:{dataset:{k:"budget",id},value:bud.value}});
-      if(!ntx) onInput({target:{dataset:{k:"real",id},value:r.value,readOnly:false}});
       d.close(); render();
     });
   });
@@ -926,7 +952,6 @@ function pageDatos(){
       const ro = c.annual ? ` readonly class="num ro" title="Parte mensual reservada: importe de cada cobro (${eur(c.budget)}) ÷ ${perN(c)}. Se cambia en Ajustes. El gasto real cuenta cuando registras el pago."` : ` class="num"`;
 
       const ovr=!c.annual&&m.budget[c.id]!==undefined&&Math.abs(m.budget[c.id]-c.budget)>0.005;   // el presupuesto de este mes difiere del de Ajustes
-      const rr = ntx ? ` readonly class="num ro" title="Suma de ${ntx} movimiento${ntx>1?"s":""} (pestaña Movimientos)"` : ` class="num"`;
       // nombre con un punto de color (esencial/capricho) y debajo, como mucho, una línea gris con día, periodicidad y movimientos
 
       // a la izquierda, el día de cobro como en un extracto (y el mes del próximo cobro si es trimestral/anual);
@@ -936,11 +961,11 @@ function pageDatos(){
       const day=`<span class="dday ${now?"now":""}"${now?' title="Se cobra este mes"':""}>${c.day||(mon?"–":"")}${mon?`<small>${mon}</small>`:""}</span>`;
       const sub2=[c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} · ${eur(c.budget)}`:"",ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ");
       return `<tr><td><div class="pcell">${day}<div><span class="pname">${esc(c.name)}</span>${sub2?`<span class="psub">${esc(sub2)}</span>`:""}</div></div>${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
-      <td class="n" data-pre="${c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} ${eur(c.budget)} ·`:"Previsto"}" data-post="${c.annual?"/mes":""}${ntx?` · ${ntx} mov.`:""}"><input${ro} inputmode="decimal" data-k="budget" data-id="${c.id}" size="${Math.max(5,showNum(budgetOf(m,c)).length-(c.annual?1:0))}" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €" aria-label="Presupuesto ${esc(c.name)}"></td>
-      <td class="n"><input${rr} inputmode="decimal" data-k="real" data-id="${c.id}" value="${showNum(spent(m,c))}" placeholder="0,00 €" aria-label="${c.annual?"Pagado":"Real"} ${esc(c.name)}"></td>
+      <td class="n"><input${ro} inputmode="decimal" data-k="budget" data-id="${c.id}" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €" aria-label="Presupuesto ${esc(c.name)}"></td>
+      <td class="n rshow ${spent(m,c)>0?"":"empty"}" title="Suma de los movimientos de esta partida (se apuntan en «Movimientos»)">${spent(m,c)>0?eur(spent(m,c)):"—"}</td>
       <td class="d" id="df-${c.id}"></td></tr>`;})||`<tr><td colspan="4" class="muted">Sin partidas (añádelas en Ajustes)</td></tr>`}
     </tbody></table></div>`;}).join("");
-  return `${monthBar(`${mesToggle("detalle")}<button class="btn" data-a="copyprev" title="Copia los ingresos y los gastos fijos; los variables y los saldos se dejan vacíos"><span class="lg">Copiar mes anterior</span><span class="sh">Copiar anterior</span></button><span class="seg" role="group" aria-label="Ordenar las partidas"><button class="${ui.sortMode==="group"?"":"on"}" data-a="sortmode" data-v="day"><span class="lg">Orden: día de cobro</span><span class="sh">Por día</span></button><button class="${ui.sortMode==="group"?"on":""}" data-a="sortmode" data-v="group"><span class="lg">Orden: categoría</span><span class="sh">Por categoría</span></button></span>`)}
+  return `${monthBar(`${mesToggle("detalle")}<button class="btn" data-a="copyprev" title="Copia los ingresos y los presupuestos del mes anterior; los movimientos y los saldos se dejan vacíos"><span class="lg">Copiar mes anterior</span><span class="sh">Copiar anterior</span></button><span class="seg" role="group" aria-label="Ordenar las partidas"><button class="${ui.sortMode==="group"?"":"on"}" data-a="sortmode" data-v="day"><span class="lg">Orden: día de cobro</span><span class="sh">Por día</span></button><button class="${ui.sortMode==="group"?"on":""}" data-a="sortmode" data-v="group"><span class="lg">Orden: categoría</span><span class="sh">Por categoría</span></button></span>`)}
   ${welcomeHtml()}
   <div class="card msum" id="msum"></div>
   <div class="grid"><div>
@@ -1034,8 +1059,7 @@ function copyPrev(){
   const n=S.months[ui.month]=structuredClone(p);
   (n.income||[]).forEach(i=>i.id=uid()); n.note="";
   // solo se repite lo que se repite: los gastos variables, los movimientos y los saldos hay que volver a apuntarlos
-  n.real={}; n.tx=[];
-  for(const c of S.cats) if(c.fixed&&c.group!=="save"&&!c.annual){ const v=spent(p,c); if(v) n.real[c.id]=v; }
+  n.real={}; n.tx=[];   // lo cobrado/gastado se apunta en «Movimientos»: no se copia
   n.bal={cash:0,invest:0,other:0,debt:0}; n.hasBal=false;
   save(); render();
 }
@@ -2277,7 +2301,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="b573be26bc19e067";
+const APP_VER="b89b5857cb889a79";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
