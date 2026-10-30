@@ -71,9 +71,11 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   .brand{display:none}
   .navtitle{display:block;position:absolute;left:50%;transform:translateX(-50%);font-weight:600;font-size:17px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
   /* cabecera opaca: con fondos translúcidos iOS 26 añade su propio desenfoque en los bordes de la pantalla */
-  header{background:var(--bg);border-bottom-color:transparent;transition:border-color .2s}
+  /* la cabecera ya no ocupa sitio: flota encima y solo se ve (con el título pequeño) cuando se desplaza la página */
+  header{position:fixed;left:0;right:0;top:0;background:transparent;border-bottom-color:transparent;pointer-events:none}
+  header nav{pointer-events:auto}
   header::before{display:none}
-  header.scrolled{border-bottom-color:var(--line2)}
+  header.scrolled{background:var(--bg);border-bottom-color:var(--line2)}
   /* bajo la barra de pestañas, el contenido se funde con el fondo en vez de verse a medias */
   body::after{content:"";position:fixed;z-index:4;left:0;right:0;bottom:0;height:calc(max(env(safe-area-inset-bottom),24px) + 84px);pointer-events:none;
     background:linear-gradient(to bottom,color-mix(in srgb,var(--bg) 0%,transparent),var(--bg) 45%)}
@@ -83,7 +85,7 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   .ltitle{display:flex!important;align-items:center;justify-content:space-between;gap:8px}
   .ltitle>span:first-child{white-space:nowrap}
   .ltstat{font-size:13px;font-weight:500;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;cursor:pointer}
-  .bar{min-height:40px}
+  .bar{min-height:44px}
   .ltstat:empty{display:none}
   .ltitle{display:block;font-size:34px;line-height:1.2;font-weight:700;letter-spacing:.01em;margin:0 4px 12px}
   nav{position:fixed;z-index:20;left:12px;right:12px;bottom:max(calc(env(safe-area-inset-bottom) + 6px),30px);justify-content:space-around;gap:0;padding:6px;
@@ -109,7 +111,7 @@ nav button{border:0;background:none;color:var(--muted);padding:7px 14px;border-r
   td .dueinfo{white-space:normal}   /* «Próximo cobro: …» pasa a dos líneas en vez de ensanchar la tabla */
   /* iPhone amplía la página al tocar un campo con letra de menos de 16 px */
   input,select,textarea{font-size:16px!important}
-  main{padding:4px 16px}
+  main{padding:10px 16px 4px}
   .card{padding:16px}
   button.btn,select,input[type=month]{min-height:44px}   /* zona táctil mínima de 44 pt */
   .seg button{min-height:36px}
@@ -2358,7 +2360,7 @@ let lastTap=0; document.addEventListener("touchend",e=>{ const n=Date.now(); if(
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="678a4e3517c6d4d2";
+const APP_VER="a750ae632be27730";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
