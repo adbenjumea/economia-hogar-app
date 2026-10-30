@@ -1652,9 +1652,17 @@ function catListHtml(){
   }
   return parts.join("");
 }
+function ajTab(){   // «Presupuesto» (partidas, objetivos, reglas) o «General» (nube, copias, ayuda)
+  // en un dispositivo nuevo, sin datos ni nube, lo útil es la sincronización
+  return ui.ajTab||(!cloud.cfg&&!hasLocalData()?"general":"presupuesto");
+}
 function pageAjustes(){
-  // sin conectar a la nube, la sincronización va primero (es lo que se busca en un dispositivo nuevo)
-  return `${cloud.cfg?"":cloudCardHtml()}<div class="card"><h2>Categorías y presupuesto</h2>
+  const t=ajTab();
+  const seg=`<div class="toolbar"><span class="seg" role="group" aria-label="Sección de ajustes"><button class="${t==="presupuesto"?"on":""}" data-a="ajtab" data-v="presupuesto">Presupuesto</button><button class="${t==="general"?"on":""}" data-a="ajtab" data-v="general">General</button></span></div>`;
+  return seg+(t==="general"?ajGeneral():ajPresupuesto());
+}
+function ajPresupuesto(){
+  return `<div class="card"><h2>Categorías y presupuesto</h2>
     <p class="muted">Las <b>categorías</b> (Vivienda, Seguros, Préstamos…) agrupan <b>partidas</b> (Hipoteca, Luz, Netflix…). Cada tarjeta es una partida: aquí cambias su <b>nombre</b> y su <b>importe por defecto</b>; con <b>Opciones</b> accedes a su categoría, tipo, periodicidad, día de cobro, orden o a eliminarla. Para reordenar, arrastra el icono ⠿.</p>
     <div class="toolbar" style="margin:0 0 12px"><span class="seg" role="group" aria-label="Vista de las partidas"><button class="${ui.catView==="list"?"":"on"}" data-a="catview" data-v="groups">Por categorías</button><button class="${ui.catView==="list"?"on":""}" data-a="catview" data-v="list">Lista simple</button></span><button class="btn" data-a="addfam">+ Nueva categoría</button></div>
     <div class="catlist">${catListHtml()}</div>
@@ -1672,8 +1680,10 @@ function pageAjustes(){
     <div class="card"><h2>Reglas de asignación</h2>
       <p class="muted">Al importar o añadir movimientos, si la descripción contiene la palabra clave se asigna esa partida. Se aprenden solas cuando corriges una partida al importar; además hay reglas básicas (Mercadona, Repsol, Netflix…).</p>
       ${S.rules.map(r=>`<div class="rulecard"><span class="t">Si la descripción contiene</span><input class="txt" data-r="kw" data-id="${r.id}" value="${esc(r.kw)}" placeholder="palabra clave" aria-label="Palabra clave"><span class="t">→ partida</span><select class="sm" data-r="cat" data-id="${r.id}" aria-label="Partida">${catOptions(r.cat)}</select><button class="btn icon danger" data-a="delrule" data-id="${r.id}" aria-label="Eliminar regla">✕</button></div>`).join("")}
-      <button class="btn" data-a="addrule">+ Nueva regla</button></div>
-    ${cloud.cfg?cloudCardHtml():""}
+      <button class="btn" data-a="addrule">+ Nueva regla</button></div>`;
+}
+function ajGeneral(){
+  return `${cloudCardHtml()}
     <div class="card"><h2>Datos y copias de seguridad</h2>
       <p class="muted">${srv.on?"Los datos se guardan en el archivo datos.json de la carpeta de la app, con una copia diaria en la carpeta «copias».":"Los datos se guardan solo en este navegador (abre la app con Abrir.command para guardarlos en un archivo)."} Descarga una copia de vez en cuando.</p>
       <div class="toolbar"><button class="btn primary" data-a="exportjson">Exportar copia (JSON)</button>
@@ -1876,7 +1886,8 @@ document.addEventListener("click",e=>{
   else if(a==="cloudlink") cloudMakeLink();
   else if(a==="cloudpaste") cloudPasteLink();
   else if(a==="gosum"){ const s=document.getElementById("summary"); if(s) s.scrollIntoView({behavior:"smooth",block:"start"}); }
-  else if(a==="goto-ajustes"){ go("ajustes"); const c=document.getElementById("cloudcard"); if(c) c.scrollIntoView({block:"start"}); }
+  else if(a==="ajtab"){ ui.ajTab=b.dataset.v; render(); window.scrollTo(0,0); }
+  else if(a==="goto-ajustes"){ ui.ajTab="general"; go("ajustes"); const c=document.getElementById("cloudcard"); if(c) c.scrollIntoView({block:"start"}); }
   else if(a==="clouddisconnect") cloudDisconnect();
   else if(a==="panelmode"){ ui.panelMode=b.dataset.v==="budget"?"budget":"real"; render(); }
   else if(a==="resetbud"){ delete ensureM(ui.month).budget[id]; save(); render(); }   // vuelve al presupuesto por defecto de Ajustes
@@ -2301,7 +2312,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="b89b5857cb889a79";
+const APP_VER="da7d96c44a71c7de";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
