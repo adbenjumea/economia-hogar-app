@@ -520,6 +520,9 @@ const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DEFAULT_ROLES=DEFAULT_CATS.map(c=>c.role);
 let S = load();
 let ui = {page:"datos", month:curMonth(), range:6};
+// al recargar se vuelve a la última pestaña (y sección de Ajustes) que estabas viendo
+try{ const p=localStorage.getItem("eh-page"); if(["datos","movs","panel","anual","ajustes"].includes(p)) ui.page=p;
+  const a=localStorage.getItem("eh-ajtab"); if(a==="presupuesto"||a==="general") ui.ajTab=a; }catch(_){}
 
 function load(){
   let raw=null; try{ raw=localStorage.getItem(KEY); }catch(e){}
@@ -723,7 +726,7 @@ function series(end,n){ return Array.from({length:n},(_,i)=>shiftMonth(end,i-n+1
 
 /* ---------- Router ---------- */
 function go(p){
-  const changed=ui.page!==p; ui.page=p; render(); window.scrollTo(0,0);
+  const changed=ui.page!==p; ui.page=p; try{ localStorage.setItem("eh-page",p); }catch(_){} render(); window.scrollTo(0,0);
   if(changed){ const a=document.getElementById("app"); a.classList.remove("enter"); void a.offsetWidth; a.classList.add("enter"); }
 }
 function placePill(){}   // (sin lente animada: la pestaña activa se marca con .on)
@@ -1924,7 +1927,7 @@ document.addEventListener("click",e=>{
   else if(a==="cloudlink") cloudMakeLink();
   else if(a==="cloudpaste") cloudPasteLink();
   else if(a==="gosum"){ const s=document.getElementById("summary"); if(s) s.scrollIntoView({behavior:"smooth",block:"start"}); }
-  else if(a==="ajtab"){ ui.ajTab=b.dataset.v; render(); window.scrollTo(0,0); }
+  else if(a==="ajtab"){ ui.ajTab=b.dataset.v; try{ localStorage.setItem("eh-ajtab",ui.ajTab); }catch(_){} render(); window.scrollTo(0,0); }
   else if(a==="goto-ajustes"){ ui.ajTab="general"; go("ajustes"); const c=document.getElementById("cloudcard"); if(c) c.scrollIntoView({block:"start"}); }
   else if(a==="clouddisconnect") cloudDisconnect();
   else if(a==="panelmode"){ ui.panelMode=b.dataset.v==="budget"?"budget":"real"; render(); }
@@ -2350,7 +2353,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="fadf9f75e5cced3b";
+const APP_VER="4dc73132500e8d04";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
