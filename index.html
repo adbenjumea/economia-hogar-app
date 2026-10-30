@@ -688,7 +688,7 @@ function pageDatos(){
       // a la izquierda, el día de cobro como en un extracto (y el mes del próximo cobro si es trimestral/anual);
       // a la derecha, el nombre y, solo si hace falta, una línea gris (periodicidad e importe de cada cobro, movimientos)
       const now=c.annual&&dueIn(c,ui.month), nd=c.annual&&c.chargeMonth?nextDue(c,ui.month):null;
-      const mon=nd?monthLabel(nd,true).replace(".",""):"";   // si toca este mes, el mes sale en verde
+      const mon=nd?monthLabel(nd,true).replace(".","").slice(0,3):"";   // tres letras («sep»); si toca este mes, sale en verde
       const day=`<span class="dday ${now?"now":""}"${now?' title="Se cobra este mes"':""}>${c.day||(mon?"–":"")}${mon?`<small>${mon}</small>`:""}</span>`;
       const sub2=[c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} · ${eur(c.budget)}`:"",ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ");
       return `<tr><td><div class="pcell">${day}<div><span class="pname">${esc(c.name)}</span>${sub2?`<span class="psub">${esc(sub2)}</span>`:""}</div></div>${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
@@ -2026,7 +2026,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="52c4da9354c67aeb";
+const APP_VER="3bdeeaf1c9ef7345";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
