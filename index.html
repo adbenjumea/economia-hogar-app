@@ -2025,7 +2025,9 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
-const appVer={cur:null,checked:0};
+// APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
+const APP_VER="52c4da9354c67aeb";
+const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
   appVer.checked=Date.now();
@@ -2034,6 +2036,10 @@ async function checkUpdate(){
     const v=(await r.json()).v; if(!v) return;
     if(appVer.cur===null){ appVer.cur=v; return; }
     if(v!==appVer.cur&&!document.querySelector("dialog[open]")&&!cloud.busy){
+      // evita bucles: como mucho un intento de recarga por versión (por si alguna caché sirviera aún la antigua)
+      let tried=""; try{ tried=sessionStorage.getItem("eh-reload")||""; }catch(_){}
+      if(tried===v) return;
+      try{ sessionStorage.setItem("eh-reload",v); }catch(_){}
       cloudFlush(); setTimeout(()=>location.reload(),cloud.dirty?1500:0);
     }
   }catch(_){}
