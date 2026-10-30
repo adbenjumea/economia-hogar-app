@@ -515,26 +515,26 @@ td.rshow{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);p
 /* ---------- Modelo ---------- */
 const KEY = "economia-hogar-v1";
 /* Cada gasto tiene dos etiquetas independientes:
-   · group: need (Esencial) / want (Capricho)  — save = destino del ahorro
+   · group: need (Necesidad) / want (Deseo)  — save = destino del ahorro
    · fixed: true = cargo fijo que se cobra sí o sí; false = variable */
-const GROUPS = {need:"Esencial", want:"Capricho", save:"Ahorro e inversión"};
+const GROUPS = {need:"Necesidad", want:"Deseo", save:"Ahorro"};
 const FIXED_SLUGS = ["vivienda","internet","comunidad","seguros","deuda","educacion","suscripciones"];
 /* NOMBRES: en la interfaz, «categoría» = cada grupo del nivel alto (Vivienda, Seguros, Préstamos, Suscripciones…; en el código «family», editables)
    y «partida» = cada línea de presupuesto (Hipoteca, Luz, Netflix…; en el código «cat»). Los comentarios antiguos que dicen «grupo» se refieren a la categoría. */
 const FAMILY_DEFS=[
   ["f_vivienda","Vivienda",["vivienda","comunidad","hogar"]],
-  ["f_suministros","Suministros y comunicaciones",["suministros","internet"]],
+  ["f_suministros","Suministros",["suministros","internet"]],
   ["f_alimentacion","Alimentación",["super","restaurantes"]],
   ["f_transporte","Transporte",["transporte"]],
   ["f_salud","Salud y cuidado personal",["salud","personal"]],
   ["f_seguros","Seguros",["seguros"]],
-  ["f_prestamos","Préstamos y deudas",["deuda"]],
+  ["f_prestamos","Deudas",["deuda"]],
   ["f_educacion","Educación",["educacion"]],
   ["f_suscripciones","Suscripciones",["suscripciones"]],
   ["f_ocio","Ocio y viajes",["ocio","viajes"]],
-  ["f_ropa","Ropa y compras",["ropa"]],
-  ["f_otros","Imprevistos y otros",["otros"]],
-  ["f_ahorro","Ahorro e inversión",["emergencia","inversion","pension","metas"]]];
+  ["f_ropa","Compras",["ropa"]],
+  ["f_otros","Imprevistos",["otros"]],
+  ["f_ahorro","Ahorro",["emergencia","inversion","pension","metas"]]];
 const DEFAULT_FAMILIES=FAMILY_DEFS.map(([id,name])=>({id,name}));
 const ROLE_FAMILY={}; FAMILY_DEFS.forEach(([id,,roles])=>roles.forEach(r=>ROLE_FAMILY[r]=id));
 const DEFAULT_CATS = [
@@ -744,7 +744,7 @@ function totals(k){
     t[c.group]+=r; t["b"+c.group]+=b;
     if(c.group!=="save"){
       const f=c.fixed?"fixed":"variable"; t[f]+=r; t["b"+f]+=b;
-      const q=(c.fixed?"f":"v")+(c.group==="need"?"e":"c"); t[q]+=r; t["b"+q]+=b;   // matriz fijo/variable × esencial/capricho (real y presupuestada)
+      const q=(c.fixed?"f":"v")+(c.group==="need"?"e":"c"); t[q]+=r; t["b"+q]+=b;   // matriz fijo/variable × necesidad/deseo (real y presupuestada)
     }
   }
   t.expenses=t.need+t.want; t.margin=t.income-t.fixed; t.saving=t.income-t.expenses; t.rate=t.income>0?t.saving/t.income*100:0;
@@ -993,7 +993,7 @@ function pageDatos(){
   const SECTIONS=[
     ["fixed","Gastos fijos","Cargos que te van a cobrar sí o sí cada mes","Previsto","Cobrado",c=>c.group!=="save"&&c.fixed],
     ["variable","Gastos variables","Cambian de un mes a otro","Presupuesto","Real",c=>c.group!=="save"&&!c.fixed],
-    ["save","Ahorro e inversión","Dinero que apartas este mes","Presupuesto","Real",c=>c.group==="save"]];
+    ["save","Ahorro","Dinero que apartas este mes","Presupuesto","Real",c=>c.group==="save"]];
   // orden por día de cobro (por defecto) o por grupo, con una fila de subtotales por grupo
   const famBlocks=(cats,fn)=>{
     const sorted=sortByFamily(cats), out=[]; let run=[];
@@ -1012,7 +1012,7 @@ function pageDatos(){
       const ro = c.annual ? ` readonly class="num ro" title="Parte mensual reservada: importe de cada cobro (${eur(c.budget)}) ÷ ${perN(c)}. Se cambia en Ajustes. El gasto real cuenta cuando registras el pago."` : ` class="num"`;
 
       const ovr=!c.annual&&m.budget[c.id]!==undefined&&Math.abs(m.budget[c.id]-c.budget)>0.005;   // el presupuesto de este mes difiere del de Ajustes
-      // nombre con un punto de color (esencial/capricho) y debajo, como mucho, una línea gris con día, periodicidad y movimientos
+      // nombre con un punto de color (necesidad/deseo) y debajo, como mucho, una línea gris con día, periodicidad y movimientos
 
       // a la izquierda, el día de cobro como en un extracto (y el mes del próximo cobro si es trimestral/anual);
       // a la derecha, el nombre y, solo si hace falta, una línea gris (periodicidad e importe de cada cobro, movimientos)
@@ -1093,8 +1093,8 @@ function updateSummary(){
     ${R("Gastos fijos",t.bfixed,t.fixed)}
     ${R("Gastos variables",t.bvariable,t.variable)}
     ${R("Total gastos",t.bexp,t.expenses,{bold:true})}
-    ${R("· Esenciales",t.bneed,t.need,{sub:true})}
-    ${R("· Caprichos",t.bwant,t.want,{sub:true})}
+    ${R("· Necesidades",t.bneed,t.need,{sub:true})}
+    ${R("· Deseos",t.bwant,t.want,{sub:true})}
     ${R("Te queda tras los fijos",t.bmargin,hasReal?t.margin:null,{sub:true,sign:true})}
     ${R("Ahorro del mes",t.bsaving,hasReal?t.saving:null,{big:true,sign:true})}
     ${R("Tasa de ahorro",t.brate,hasReal?t.rate:null,{sub:true,sign:true,fmt:pc})}
@@ -1442,7 +1442,7 @@ function budgetInsights(t,keys){
     else add("bad",`Ahorrarías solo ${eur(t.saving)} (${pct(t.rate)}): es una tasa baja.`);
     const fx=t.fixed/t.income*100;
     add(fx>60?"bad":fx>50?"warn":"ok",`Gastos fijos previstos: ${eur(t.fixed)} (${pct(fx)} de los ingresos). Tras pagarlos quedarían ${eur(t.margin)}.${fx>50?" Es una proporción alta: deja poco margen.":""}`);
-    if(t.want/t.income*100>25) add("warn",`Los caprichos previstos son el ${pct(t.want/t.income*100)} de tus ingresos.`);
+    if(t.want/t.income*100>25) add("warn",`Los deseos previstos son el ${pct(t.want/t.income*100)} de tus ingresos.`);
     if(t.save>t.saving+1) add("warn",`Quieres destinar ${eur(t.save)} a ahorro/inversión, pero con este presupuesto solo sobran ${eur(Math.max(0,t.saving))}.`);
     else if(t.saving>0&&t.unassigned>t.income*.05) add("warn",`Te sobrarían ${eur(t.unassigned)} sin asignar a ninguna partida de ahorro.`);
   } else add("warn","No hay ingresos en este mes: indica tus ingresos para valorar el presupuesto.");
@@ -1634,12 +1634,12 @@ function structure(t){
     <div class="track"><div class="fill" style="width:${Math.min(100,v/base*100)}%;background:${col}"></div></div></div>`;
   const cell=v=>`${eur(v)}<div class="muted">${pct(v/t.expenses*100)}</div>`;
   return `<h3>Fijos y variables (${lab})</h3>`+meter("Fijos",t.fixed,"var(--c3)")+meter("Variables",t.variable,"var(--c5)")
-    +`<h3 style="margin-top:14px">Esenciales y caprichos (${lab})</h3>`+meter("Esenciales",t.need,"var(--c2)")+meter("Caprichos",t.want,"var(--c4)")
+    +`<h3 style="margin-top:14px">Necesidades y deseos (${lab})</h3>`+meter("Necesidades",t.need,"var(--c2)")+meter("Deseos",t.want,"var(--c4)")
     +`<h3 style="margin-top:14px">Cruce (% sobre el total de gastos)</h3>
-    <table class="mx"><thead><tr><th></th><th>Esencial</th><th>Capricho</th></tr></thead><tbody>
+    <table class="mx"><thead><tr><th></th><th>Necesidad</th><th>Deseo</th></tr></thead><tbody>
     <tr><td>Fijo</td><td>${cell(t.fe)}</td><td>${cell(t.fc)}</td></tr>
     <tr><td>Variable</td><td>${cell(t.ve)}</td><td>${cell(t.vc)}</td></tr></tbody></table>
-    <div class="hint">Lo más fácil de recortar: los caprichos variables. Lo más rígido: los esenciales fijos.</div>`;
+    <div class="hint">Lo más fácil de recortar: los deseos variables. Lo más rígido: las necesidades fijas.</div>`;
 }
 function budgetBars(k){
   const m=getM(k), rows=S.cats.filter(c=>c.group!=="save"&&!c.annual).map(c=>({n:c.name+(c.fixed?" · fijo":""),b:budgetOf(m,c),r:spent(m,c)})).filter(x=>x.b>0||x.r>0).sort((a,b)=>b.r-a.r).slice(0,12);
@@ -1671,12 +1671,12 @@ function insights(t,T,emerg,avgNeed){
     const deu=realByRole(ui.month,"deuda")/t.income*100; if(deu>15) add("warn",`Las cuotas de préstamos son el ${pct(deu)} de tus ingresos; conviene mantenerlas por debajo del 15% (35% incluyendo la hipoteca).`);
     const fx=t.fixed/t.income*100;
     if(t.fixed>0) add(fx>60?"bad":fx>50?"warn":"ok",`Gastos fijos: ${eur(t.fixed)} (${pct(fx)} de los ingresos). Tras pagarlos te quedan ${eur(t.margin)}.${fx>50?" Es una proporción alta: dejan poco margen de maniobra.":""}`);
-    if(t.want/t.income*100>25) add("warn",`Los caprichos suponen el ${pct(t.want/t.income*100)} de tus ingresos (${eur(t.vc)} variables y ${eur(t.fc)} fijos).`);
+    if(t.want/t.income*100>25) add("warn",`Los deseos suponen el ${pct(t.want/t.income*100)} de tus ingresos (${eur(t.vc)} variables y ${eur(t.fc)} fijos).`);
     if(t.saving>0 && t.unassigned>t.income*.05) add("warn",`Tienes ${eur(t.unassigned)} sin asignar: dinero que sobra pero no está registrado como ahorro/inversión.`);
   }
   const over=S.cats.filter(c=>c.group!=="save"&&!c.annual).map(c=>({c,b:budgetOf(m,c),r:spent(m,c)})).filter(x=>x.b>0&&x.r>x.b*1.1).sort((a,b)=>(b.r-b.b)-(a.r-a.b)).slice(0,3);
   over.forEach(x=>add("warn",`${x.c.name}: ${eur(x.r)} frente a ${eur(x.b)} presupuestados (+${eur(x.r-x.b)}).`));
-  if(emerg!==null) add(emerg>=6?"ok":emerg>=3?"ok":"bad",`Fondo de emergencia: cubre ${emerg.toFixed(1).replace(".",",")} meses de gastos esenciales (${eur(avgNeed)}/mes). ${emerg<3?"Prioriza llegar a 3 meses; el ideal son 6.":"Buen colchón."}`);
+  if(emerg!==null) add(emerg>=6?"ok":emerg>=3?"ok":"bad",`Fondo de emergencia: cubre ${emerg.toFixed(1).replace(".",",")} meses de tus necesidades (${eur(avgNeed)}/mes). ${emerg<3?"Prioriza llegar a 3 meses; el ideal son 6.":"Buen colchón."}`);
   const w=T.filter(x=>x.has); if(w.length>=3){ const a=sum(w.slice(-3).map(x=>x.expenses))/Math.min(3,w.length), b=sum(w.slice(0,3).map(x=>x.expenses))/3;
     if(a>b*1.1) add("warn",`Tus gastos medios de los últimos meses son un ${pct((a/b-1)*100)} mayores que al inicio del periodo.`); }
   if(!out.length) add("ok","Sin alertas. Sigue registrando datos cada mes para afinar el diagnóstico.");
@@ -1781,7 +1781,7 @@ function ajPresupuesto(){
     <div class="toolbar" style="margin:12px 0 0"><button class="btn" data-a="addcat">+ Nueva partida al final</button><button class="btn" data-a="insertfirst">+ Insertar al principio</button></div>
     <details class="help"><summary>¿Qué significa cada opción?</summary><ul>
       <li><b>Categoría</b>: agrupa partidas (Vivienda, Seguros, Préstamos, Suscripciones…). Puedes crear, renombrar y ordenar las categorías; sirven para ordenar y sumar en «Datos del mes» y en los gráficos.</li>
-      <li><b>Tipo</b>: <i>Esencial</i> (lo necesitas) o <i>Capricho</i> (te lo podrías ahorrar). <i>Ahorro e inversión</i> es a dónde envías el dinero que sobra.</li>
+      <li><b>Tipo</b>: <i>Necesidad</i> (lo necesitas) o <i>Deseo</i> (te lo podrías ahorrar). <i>Ahorro</i> es a dónde envías el dinero que sobra.</li>
       <li><b>Fijo / variable</b>: fijo es lo que te cobran sí o sí cada mes; variable cambia.</li>
       <li><b>Periodicidad</b>: mensual, o <i>trimestral / anual</i> para gastos que llegan de golpe (agua, seguro, IBI…). El importe es el de cada cobro. En el presupuesto de cada mes se reserva la parte proporcional; el gasto real es lo que registres cuando se paga.</li>
       <li><b>Día y mes de cobro</b>: «Datos del mes» ordena por día y muestra un calendario de cobros. Si el día está vacío, no se muestra fecha.</li>
@@ -1807,7 +1807,7 @@ function ajGeneral(){
     <div class="card"><h2>Cómo usarla</h2><ol class="muted">
       <li>Cada mes, en <b>Datos del mes</b>: apunta ingresos, gasto real por partida y los saldos de tus cuentas/deudas. «Copiar mes anterior» te ahorra trabajo. Si prefieres ir apuntando cada gasto o importar el CSV del banco, usa <b>Movimientos</b>: cada partida con movimientos suma sola.</li>
       <li>En el <b>Panel</b> revisa el ritmo del mes, la comparativa con el año pasado, los objetivos y el diagnóstico; en <b>Anual</b>, el resumen del año.</li>
-      <li>Referencias: ahorrar ≥20%, gastos fijos ≤50% de los ingresos, vivienda ≤30% y fondo de emergencia de 3–6 meses de gastos esenciales.</li></ol></div>`;
+      <li>Referencias: ahorrar ≥20%, gastos fijos ≤50% de los ingresos, vivienda ≤30% y fondo de emergencia de 3–6 meses de necesidades.</li></ol></div>`;
 }
 document.addEventListener("input",e=>{
   const f=e.target.dataset.s; if(!f) return;
@@ -2430,7 +2430,7 @@ let lastTap=0; document.addEventListener("touchend",e=>{ const n=Date.now(); if(
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="ba204802685fe2e5";
+const APP_VER="90b6c548898d3802";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
