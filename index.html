@@ -309,8 +309,11 @@ details.help ul{margin:8px 0 0;padding-left:18px;line-height:1.55}
 .dueinfo{display:block;width:fit-content;max-width:100%;margin-top:3px;font-size:11px;line-height:1.35;color:var(--muted);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dueinfo.ovr{color:var(--warn)}
 .pname{display:inline}
-.psub{display:inline-block;font-size:12px;color:var(--muted);margin-left:4px}   /* si no cabe junto al nombre, baja a la línea siguiente */
-.psub.now{color:var(--accent);font-weight:600}
+.pcell{display:flex;gap:8px;align-items:baseline}
+.dday{flex:0 0 26px;text-align:center;font-size:14px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.15}
+.dday small{display:block;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.02em}
+.dday.now{color:var(--accent)}
+.psub{display:block;font-size:12px;color:var(--muted)}
 .dt td{padding-top:3px;padding-bottom:3px}
 .dt input.num{padding-top:5px;padding-bottom:5px}
 .linkbtn{border:0;background:none;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline;padding:0;margin-left:4px}
@@ -565,16 +568,6 @@ function famIndex(id){ const i=S.families.findIndex(f=>f.id===id); return i<0?99
 function catsOfFamily(fid){ return S.cats.filter(c=>(c.family||null)===(fid||null)); }
 function sortByFamily(list){ return list.map((c,i)=>[c,i]).sort((a,b)=>famIndex(a[0].family)-famIndex(b[0].family)||a[1]-b[1]).map(x=>x[0]); }   // orden de los grupos; dentro, el orden previo
 function sortByDay(list){ return list.map((c,i)=>[c,i]).sort((a,b)=>((a[0].day||99)-(b[0].day||99))||a[1]-b[1]).map(x=>x[0]); }   // sin día al final, respetando el orden manual
-function dueInfo(c,k){   // texto bajo el nombre en «Datos del mes»; en blanco si no hay fecha que mostrar
-  const short=mk=>{ const [y,m]=mk.split("-").map(Number); return new Date(y,m-1,1).toLocaleDateString("es-ES",{month:"short"}).replace(".",""); };   // «nov» (siempre cae en los próximos 12 meses)
-  // una sola línea corta: «día 1» · «Anual · 1 ago 2027 · 300,02 €» · «Trimestral · se cobra el 1 · 50,00 €»
-  if(!c.annual) return c.day?`día ${c.day}`:"";
-  const per=c.period==="quarter"?"Trimestral":"Anual";
-  if(!c.chargeMonth) return `${per} · falta el mes de cobro`;
-  const amt=eur(c.budget);
-  if(dueIn(c,k)) return `${per} · se cobra ${c.day?`el ${c.day}`:"este mes"} · ${amt}`;
-  const n=nextDue(c,k); return n?`${per} · ${c.day?c.day+" ":""}${short(n)} · ${amt}`:per;
-}
 function realByRole(k,role){ const c=S.cats.find(c=>c.role===role); return c?costOf(getM(k),c,k):0; }
 
 /* ---------- Utilidades ---------- */
@@ -687,14 +680,18 @@ function pageDatos(){
     ${rowsOf(cats,c=>{
       const ntx=(m.tx||[]).filter(t=>t.cat===c.id).length;
       const ro = c.annual ? ` readonly class="num ro" title="Parte mensual reservada: importe de cada cobro (${eur(c.budget)}) ÷ ${perN(c)}. Se cambia en Ajustes. El gasto real cuenta cuando registras el pago."` : ` class="num"`;
-      const di=dueInfo(c,ui.month);
+
       const ovr=!c.annual&&m.budget[c.id]!==undefined&&Math.abs(m.budget[c.id]-c.budget)>0.005;   // el presupuesto de este mes difiere del de Ajustes
       const rr = ntx ? ` readonly class="num ro" title="Suma de ${ntx} movimiento${ntx>1?"s":""} (pestaña Movimientos)"` : ` class="num"`;
       // nombre con un punto de color (esencial/capricho) y debajo, como mucho, una línea gris con día, periodicidad y movimientos
-      // cada trozo («1 ago», «300,02 €») va sin cortes; solo puede partirse en los « · »
-      const sub=[di,ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ").split(" · ").map(s=>s.replace(/ /g," ")).join(" · ");
-      // nombre y, en la misma línea si cabe, el dato corto en gris (día de cobro, periodicidad, movimientos)
-      return `<tr><td><span class="pname">${esc(c.name)}</span>${sub?` <span class="psub ${c.annual&&dueIn(c,ui.month)?"now":""}">${esc(sub)}</span>`:""}${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
+
+      // a la izquierda, el día de cobro como en un extracto (y el mes del próximo cobro si es trimestral/anual);
+      // a la derecha, el nombre y, solo si hace falta, una línea gris (periodicidad e importe de cada cobro, movimientos)
+      const now=c.annual&&dueIn(c,ui.month), nd=c.annual&&c.chargeMonth?nextDue(c,ui.month):null;
+      const mon=nd?monthLabel(nd,true).replace(".",""):"";   // si toca este mes, el mes sale en verde
+      const day=`<span class="dday ${now?"now":""}"${now?' title="Se cobra este mes"':""}>${c.day||(mon?"–":"")}${mon?`<small>${mon}</small>`:""}</span>`;
+      const sub2=[c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} · ${eur(c.budget)}`:"",ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ");
+      return `<tr><td><div class="pcell">${day}<div><span class="pname">${esc(c.name)}</span>${sub2?`<span class="psub">${esc(sub2)}</span>`:""}</div></div>${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
       <td class="n"><input${ro} inputmode="decimal" data-k="budget" data-id="${c.id}" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €" aria-label="Presupuesto ${esc(c.name)}"></td>
       <td class="n"><input${rr} inputmode="decimal" data-k="real" data-id="${c.id}" value="${showNum(spent(m,c))}" placeholder="0,00 €" aria-label="${c.annual?"Pagado":"Real"} ${esc(c.name)}"></td>
       <td class="d" id="df-${c.id}"></td></tr>`;})||`<tr><td colspan="4" class="muted">Sin partidas (añádelas en Ajustes)</td></tr>`}
