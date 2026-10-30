@@ -282,7 +282,7 @@ tr.famrow td:not(:first-child){text-align:right;font-weight:600;font-variant-num
 .amt small{color:var(--muted);font-size:11.5px;width:58px;white-space:nowrap}
 .catpanel{display:none;padding:14px 14px 16px;border-top:1px solid var(--line);background:var(--bg);border-radius:0 0 12px 12px}
 .catitem.open .catpanel{display:block}
-.catpanel input,.catpanel select{background:var(--card)}
+.catpanel input,.catpanel select{background-color:var(--card)}   /* background-color (no «background») para no borrar la flecha de los desplegables */
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
 .fgrid .wide{grid-column:1/-1}
 .fgrid .f{display:block;font-size:12px;font-weight:600;color:var(--muted)}
@@ -309,9 +309,10 @@ details.help ul{margin:8px 0 0;padding-left:18px;line-height:1.55}
 .dueinfo{display:block;width:fit-content;max-width:100%;margin-top:3px;font-size:11px;line-height:1.35;color:var(--muted);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dueinfo.ovr{color:var(--warn)}
 .pname{display:inline}
-.gdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 6px 1px 0;vertical-align:middle;background:var(--muted)}
-.gdot.need{background:var(--sav)}.gdot.want{background:var(--exp)}
-.nowrap{white-space:nowrap}
+.psub{display:inline-block;font-size:12px;color:var(--muted);margin-left:4px}   /* si no cabe junto al nombre, baja a la línea siguiente */
+.psub.now{color:var(--accent);font-weight:600}
+.dt td{padding-top:3px;padding-bottom:3px}
+.dt input.num{padding-top:5px;padding-bottom:5px}
 .linkbtn{border:0;background:none;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline;padding:0;margin-left:4px}
 .dueinfo.now{color:var(--accent);font-weight:600;background:var(--soft);padding:1px 8px;border-radius:10px}
 .ro{opacity:.75;background:transparent!important;cursor:default}
@@ -349,6 +350,8 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
 .linkbox{background:var(--soft);border-radius:12px;padding:14px;margin:12px 0}
 .cloudform .f{display:block;font-size:12px;font-weight:600;color:var(--muted)}
 .cloudform .f input{margin-top:5px;font-weight:400;color:var(--ink)}
+@media(max-width:720px){main .card{padding:14px}}
+@media(max-width:370px){.dt td.n{width:78px;min-width:78px} table.mx td,table.mx th{padding:6px 4px}}   /* va al final para que gane a la regla general de .card */
 </style>
 </head>
 <body>
@@ -679,7 +682,7 @@ function pageDatos(){
   const rowsOf=(cats,fn)=>ui.sortMode==="group"?famBlocks(cats,fn):cats.map(fn).join("");
   const groups = SECTIONS.map(([g,title,sub,hb,hr,pick])=>{
     const cats=sortByDay(S.cats.filter(pick));   // por día de cobro; sin día, al final
-    return `<div class="card"><h2>${title} <span class="muted" id="gt-${g}"></span></h2><div class="hint" style="margin:-6px 0 8px">${sub}${g==="save"?"":` · <span class="nowrap"><i class="gdot need"></i>esencial <i class="gdot want"></i>capricho</span>`}</div>
+    return `<div class="card"><h2>${title} <span class="muted" id="gt-${g}"></span></h2><div class="hint" style="margin:-6px 0 8px">${sub}</div>
     <table class="dt"><thead><tr><th>Partida</th><th>${hb}</th><th>${hr}</th><th>Dif.</th></tr></thead><tbody>
     ${rowsOf(cats,c=>{
       const ntx=(m.tx||[]).filter(t=>t.cat===c.id).length;
@@ -688,8 +691,10 @@ function pageDatos(){
       const ovr=!c.annual&&m.budget[c.id]!==undefined&&Math.abs(m.budget[c.id]-c.budget)>0.005;   // el presupuesto de este mes difiere del de Ajustes
       const rr = ntx ? ` readonly class="num ro" title="Suma de ${ntx} movimiento${ntx>1?"s":""} (pestaña Movimientos)"` : ` class="num"`;
       // nombre con un punto de color (esencial/capricho) y debajo, como mucho, una línea gris con día, periodicidad y movimientos
-      const sub=[di,ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ");
-      return `<tr><td><span class="pname">${c.group==="save"?"":`<i class="gdot ${c.group}" title="${GROUPS[c.group]}"></i>`}${esc(c.name)}</span>${sub?`<span class="dueinfo ${c.annual&&dueIn(c,ui.month)?"now":""}">${esc(sub)}</span>`:""}${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
+      // cada trozo («1 ago», «300,02 €») va sin cortes; solo puede partirse en los « · »
+      const sub=[di,ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ").split(" · ").map(s=>s.replace(/ /g," ")).join(" · ");
+      // nombre y, en la misma línea si cabe, el dato corto en gris (día de cobro, periodicidad, movimientos)
+      return `<tr><td><span class="pname">${esc(c.name)}</span>${sub?` <span class="psub ${c.annual&&dueIn(c,ui.month)?"now":""}">${esc(sub)}</span>`:""}${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
       <td class="n"><input${ro} inputmode="decimal" data-k="budget" data-id="${c.id}" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €" aria-label="Presupuesto ${esc(c.name)}"></td>
       <td class="n"><input${rr} inputmode="decimal" data-k="real" data-id="${c.id}" value="${showNum(spent(m,c))}" placeholder="0,00 €" aria-label="${c.annual?"Pagado":"Real"} ${esc(c.name)}"></td>
       <td class="d" id="df-${c.id}"></td></tr>`;})||`<tr><td colspan="4" class="muted">Sin partidas (añádelas en Ajustes)</td></tr>`}
@@ -912,7 +917,7 @@ function pageMov(){
   <div class="card"><h2>Nuevo movimiento</h2>
     <div class="txform">
       <input class="txt" type="date" id="txdate" data-f="txnew" value="${dflt}" aria-label="Fecha">
-      <input class="txt" id="txdesc" data-f="txnew" placeholder="Descripción (Mercadona, gasolina…)" aria-label="Descripción">
+      <input class="txt" id="txdesc" data-f="txnew" placeholder="Descripción" aria-label="Descripción">
       <select class="sm" id="txcat" data-f="txnew" aria-label="Partida">${catOptions("","Partida…")}</select>
       <input class="num" id="txamt" data-f="txnew" inputmode="decimal" placeholder="0,00 €" aria-label="Importe">
       <button class="btn primary" data-a="addtx">Añadir</button></div>
@@ -1160,8 +1165,10 @@ function pageAnual(){
   const best=W.reduce((a,b)=>b.saving>a.saving?b:a), worst=W.reduce((a,b)=>b.expenses>a.expenses?b:a);
   const bal=raw.map((x,i)=>({k:keys[i],x})).filter(o=>o.x.hasBal);
   const kp=(l,v,s,c="")=>`<div class="kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`;
-  const rows=raw.map((x,i)=>x.has?`<tr><td>${monthLabel(keys[i])}</td><td>${eur(x.income)}</td><td>${eur(x.fixed)}</td><td>${eur(x.variable)}</td><td>${eur(x.expenses)}</td><td class="${x.saving>=0?"pos":"neg"}">${eur(x.saving)}</td><td>${x.income>0?pct(x.rate):"—"}</td></tr>`
-    :`<tr class="muted"><td>${monthLabel(keys[i])}</td><td colspan="6">—</td></tr>`).join("");
+  // mes corto («oct») para que en el móvil quepan más columnas; el año ya está en el selector
+  const ml=k=>{ const s=monthLabel(k,true).replace(".",""); return s[0].toUpperCase()+s.slice(1); };
+  const rows=raw.map((x,i)=>x.has?`<tr><td>${ml(keys[i])}</td><td>${eur(x.income)}</td><td>${eur(x.fixed)}</td><td>${eur(x.variable)}</td><td>${eur(x.expenses)}</td><td class="${x.saving>=0?"pos":"neg"}">${eur(x.saving)}</td><td>${x.income>0?pct(x.rate):"—"}</td></tr>`
+    :`<tr class="muted"><td>${ml(keys[i])}</td><td colspan="6">—</td></tr>`).join("");
   const avg=f=>tot(f)/W.length;
   const catRows=S.cats.filter(c=>c.group!=="save").map(c=>{
     const v=sum(keys.filter((k,i)=>raw[i].has).map(k=>costOf(getM(k),c,k))), b=sum(keys.filter((k,i)=>raw[i].has).map(k=>budgetOf(getM(k),c)));
