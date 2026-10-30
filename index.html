@@ -1341,8 +1341,7 @@ function pagePanel(){
   const inc=v=>t.income>0?pct(v/t.income*100)+" de los ingresos":"";
   const kpis=`<div class="kpis">
     ${kp("Ingresos",eur(t.income),monthLabel(ui.month))}
-    ${kp(bud?"Gastos fijos previstos":"Gastos fijos",eur(t.fixed),bud?`${inc(t.fixed)}${t.income>0?" · ":""}real ${eur(RT.fixed)}`:inc(t.fixed))}
-    ${kp(bud?"Gastos variables previstos":"Gastos variables",eur(t.variable),bud?`real ${eur(RT.variable)}`:(RT.bvariable?`Presupuesto ${eur(RT.bvariable)}`:""))}
+    ${kp(bud?"Gastos previstos":"Gastos",eur(t.expenses),bud?`${inc(t.expenses)}${t.income>0?" · ":""}real ${eur(RT.expenses)}`:(RT.bexp?`de ${eur(RT.bexp)} presupuestados`:inc(t.expenses)))}
     ${kp(bud?"Ahorro previsto":"Ahorro",eur(t.saving),t.income>0?"Tasa "+pct(t.rate):"",t.saving>=0?"pos":"neg")}
     ${kp("Patrimonio neto",t.hasBal?eur(t.net):"—",prevNet!==null?(prevNet>=0?"+":"")+eur(prevNet)+" en el periodo":"Introduce saldos")}
     ${kp("Fondo de emergencia",emerg!==null?emerg.toFixed(1).replace(".",",")+" meses":"—","Objetivo: 3–6 meses",emerg===null?"":emerg>=3?"pos":"neg")}
@@ -2351,7 +2350,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="d79b92da05f8b4fa";
+const APP_VER="fadf9f75e5cced3b";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
