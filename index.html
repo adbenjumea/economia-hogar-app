@@ -354,7 +354,32 @@ dialog h3{margin:0 0 10px;font-size:15px;color:var(--ink);text-transform:none;le
 .cloudform .f{display:block;font-size:12px;font-weight:600;color:var(--muted)}
 .cloudform .f input{margin-top:5px;font-weight:400;color:var(--ink)}
 @media(max-width:720px){main .card{padding:14px}}
-@media(max-width:370px){.dt td.n{width:78px;min-width:78px} table.mx td,table.mx th{padding:6px 4px}}   /* va al final para que gane a la regla general de .card */
+@media(max-width:370px){table.mx td,table.mx th{padding:6px 4px}}
+/* «Datos del mes» en el móvil: cada fila es una rejilla. A la derecha, una sola casilla («Cobrado»/«Real»);
+   el previsto pasa debajo del nombre, en gris y editable. Las celdas siguen en el mismo orden (Enter funciona igual). */
+@media(max-width:720px){
+  .dt{display:block}
+  .dt thead,.dt tbody{display:block}
+  .dt tr{display:grid;grid-template-columns:minmax(0,1fr) 104px;column-gap:10px;align-items:center;border-top:.5px solid var(--line2);padding:5px 0}
+  .dt thead tr{border-top:0;padding:0 0 4px}
+  .dt td,.dt th{display:block;border-top:0!important;padding:0!important;width:auto!important;min-width:0!important}
+  .dt tr>:nth-child(1){grid-column:1;grid-row:1}
+  .dt tr>:nth-child(2){grid-column:1;grid-row:2}
+  .dt tr>:nth-child(3){grid-column:2;grid-row:1/span 2}
+  .dt tr>:nth-child(4),.dt thead th:nth-child(2){display:none!important}
+  .dt td[colspan]{grid-column:1/-1}
+  .dt tbody tr:not(.famrow)>td:nth-child(2){display:flex!important;align-items:baseline;gap:5px;padding-left:34px!important;color:var(--muted);font-size:13px}
+  .dt tbody tr:not(.famrow)>td:nth-child(2)::before{content:attr(data-pre);white-space:nowrap}
+  .dt tbody tr:not(.famrow)>td:nth-child(2)::after{content:attr(data-post);white-space:nowrap}
+  .dt .psub{display:none}   /* en el móvil, ese dato va en la línea del previsto */
+  .dt tbody tr>td:nth-child(2) input.num{background:transparent!important;color:var(--muted);text-align:left;padding:0!important;width:auto;min-width:0;flex:0 1 auto;height:auto}
+  .dt tbody tr>td:nth-child(2) input.num.ro{font-size:13px!important}   /* (solo lectura: no hace falta 16 px para evitar el zoom de iOS) */
+  .dt tbody tr>td:nth-child(2) input.num:focus{background:var(--fill)!important;color:var(--ink);padding:2px 6px!important;outline:none}
+  .dt tbody tr>td:nth-child(3) input.num{padding:8px!important}
+  tr.famrow{background:var(--soft);border-radius:8px;padding:6px 8px!important;margin:6px 0 2px}
+  tr.famrow>td:nth-child(2){font-size:12px;font-weight:500;color:var(--muted);text-align:left!important}
+  tr.famrow>td:nth-child(3){text-align:right}
+}   /* va al final para que gane a la regla general de .card */
 </style>
 </head>
 <body>
@@ -692,7 +717,7 @@ function pageDatos(){
       const day=`<span class="dday ${now?"now":""}"${now?' title="Se cobra este mes"':""}>${c.day||(mon?"–":"")}${mon?`<small>${mon}</small>`:""}</span>`;
       const sub2=[c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} · ${eur(c.budget)}`:"",ntx?`${ntx} mov.`:""].filter(Boolean).join(" · ");
       return `<tr><td><div class="pcell">${day}<div><span class="pname">${esc(c.name)}</span>${sub2?`<span class="psub">${esc(sub2)}</span>`:""}</div></div>${ovr?`<span class="dueinfo ovr">Presupuesto ajustado este mes · en Ajustes: ${eur(c.budget)} <button class="linkbtn" data-a="resetbud" data-id="${c.id}">restaurar</button></span>`:""}</td>
-      <td class="n"><input${ro} inputmode="decimal" data-k="budget" data-id="${c.id}" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €" aria-label="Presupuesto ${esc(c.name)}"></td>
+      <td class="n" data-pre="${c.annual?`${c.period==="quarter"?"Trimestral":"Anual"} ${eur(c.budget)} ·`:"Previsto"}" data-post="${c.annual?"/mes":""}${ntx?` · ${ntx} mov.`:""}"><input${ro} inputmode="decimal" data-k="budget" data-id="${c.id}" size="${Math.max(5,showNum(budgetOf(m,c)).length-(c.annual?1:0))}" value="${showNum(budgetOf(m,c))}" placeholder="0,00 €" aria-label="Presupuesto ${esc(c.name)}"></td>
       <td class="n"><input${rr} inputmode="decimal" data-k="real" data-id="${c.id}" value="${showNum(spent(m,c))}" placeholder="0,00 €" aria-label="${c.annual?"Pagado":"Real"} ${esc(c.name)}"></td>
       <td class="d" id="df-${c.id}"></td></tr>`;})||`<tr><td colspan="4" class="muted">Sin partidas (añádelas en Ajustes)</td></tr>`}
     </tbody></table></div>`;}).join("");
@@ -2026,7 +2051,7 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 /* Actualización automática: la web publicada incluye version.json. Al volver a la app (iOS no la recarga sola),
    si hay versión nueva se recarga; los datos ya están guardados y lo pendiente de la nube se sube al arrancar. */
 // APP_VER lo rellena publicar-web.sh con la misma huella que version.json: así la app sabe qué versión tiene cargada
-const APP_VER="3bdeeaf1c9ef7345";
+const APP_VER="1bf191b36af702e5";
 const appVer={cur:APP_VER.startsWith("__")?null:APP_VER,checked:0};
 async function checkUpdate(){
   if(location.protocol!=="https:"||Date.now()-appVer.checked<30000) return;
